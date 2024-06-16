@@ -19,6 +19,7 @@ if __name__ == '__main__':
     # config_list contains the model that you want to compare. You can remove or add configurations to this list.
     config_list = [
         # 'float',
+        'configs/W4A8/w4a8_per_channel_per_channel_matmul_A_dynamic_custom_bits.yaml',
         # 'configs/W4A8/w4a8_per_channel_per_channel_matmul_A_dynamic.yaml',
         # 'configs/W4A8/w4a8_per_channel_per_channel_matmul_A_dynamic.yaml',
         # 'configs/W4A8/w4a8_per_channel_per_tensor_matmul_B_dynamic.yaml',
@@ -35,7 +36,7 @@ if __name__ == '__main__':
         # 'configs/smoothquant_w8a8_per_channel_per_tensor_matmul_C_static.yaml',
         # 'configs/w8a8_per_channel_per_channel_matmul_A_dynamic.yaml',
         # 'configs/w8a8_per_channel_per_tensor_matmul_B_dynamic.yaml',
-        'configs/w8a8_per_channel_per_tensor_matmul_C_static.yaml',
+        # 'configs/w8a8_per_channel_per_tensor_matmul_C_static.yaml',
         # 'configs/w8a8_per_tensor_per_channel_matmul_B_dynamic.yaml'
     ]
     ppl_list = []
