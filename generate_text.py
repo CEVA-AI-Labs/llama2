@@ -9,7 +9,7 @@ import time
 from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
 from utils import get_calibration_loader
-
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def generate_text(prompt, model, tokenizer):
     print('Initializing pipeline')
@@ -28,7 +28,7 @@ def generate_text(prompt, model, tokenizer):
         top_k=1,
         num_return_sequences=1,
         eos_token_id=tokenizer.eos_token_id,
-        truncation=True,
+        # truncation=True,
         max_length=400,
     )
     end = time.time()
@@ -53,13 +53,15 @@ if __name__ == '__main__':
     # config_name = 'configs/smoothquant_w8a8_per_channel_per_tensor_matmul_static.yaml'
     # config_name = 'configs/w4a8_per_channel_per_channel_dynamic.yaml'
     # config_name = 'configs/w4a8_per_channel_per_tensor_matmul_dynamic.yaml'
-    config_name = 'configs/w8a8_per_channel_per_channel_dynamic.yaml'
+    # config_name = 'configs/w8a8_per_channel_per_channel_matmul_A_dynamic.yaml'
     # config_name = 'configs/w8a8_per_channel_per_tensor_matmul_dynamic.yaml'
     # config_name = 'configs/w8a8_per_channel_per_tensor_matmul_static.yaml'
     # config_name = 'configs/w8a8_per_tensor_per_channel_dynamic.yaml'  # ?
+    config_name = 'test_config_llama.yaml'
 
     print('Loading model')
     model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float16)
+    # model = LlamaForCausalLM.from_pretrained(model_dir, device_map=0, torch_dtype=torch.float16)
     model.eval()
     with torch.no_grad():
         if config_name != 'float':
@@ -76,6 +78,9 @@ if __name__ == '__main__':
                     "calibration_loader_key"
                 ] = lambda model, x: model(x.cuda())
             model = RetrainerModel(model, config=RetrainerConfig(conf))
+            if 'OmniQuant' in conf["QAT"]:
+                model = model.to(device)
+
             generate_text(prompt, model._model._model, tokenizer)
         else:
             generate_text(prompt, model, tokenizer)  # for float model

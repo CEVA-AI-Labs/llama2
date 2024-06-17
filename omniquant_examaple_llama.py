@@ -8,6 +8,7 @@ from liteml.ailabs_shared.load_config import load_config
 from liteml.ailabs_liteml.retrainer import RetrainerModel, RetrainerConfig
 from datasets import load_dataset
 from tqdm import tqdm
+from evaluate_models import evaluate
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def main():
@@ -17,7 +18,6 @@ def main():
 
     # Like in OmniQuant
     config = AutoConfig.from_pretrained(model_dir)
-    # tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=False, legacy=False)
     model = AutoModelForCausalLM.from_pretrained(model_dir, config=config, device_map='cpu', torch_dtype=torch.float16)
     model.eval()
     for param in model.parameters():
@@ -29,7 +29,10 @@ def main():
 
     conf = load_config(os.path.join(root, "test_config_llama.yaml"))
 
-    model_quantized = RetrainerModel(model, config=RetrainerConfig(conf))
+    model_quantized = RetrainerModel(model, config=RetrainerConfig(conf)).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=False, legacy=False)
+    ppl = evaluate(model_quantized, tokenizer, seq_len=2048)
+    print(ppl)
     print('Done')
 
 
