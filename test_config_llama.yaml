@@ -1,4 +1,3 @@
-Q34G67#!: True
 QAT:
     fully_quantized: False
     device: 'cuda'
@@ -14,7 +13,7 @@ QAT:
       status: On
       bits: 4
       custom_bits: {'lm_head': 8}
-      symmetric: Off
+      symmetric: On
       per_channel: True
       quant_and_freeze: False
 
@@ -33,17 +32,12 @@ QAT:
         dims: [ 0, -2 ]
 
     OmniQuant:
-      target_layers: {'input_layernorm': ['self_attn.q_proj', 'self_attn.k_proj', 'self_attn.v_proj'],
-                         'post_attention_layernorm': ['mlp.up_proj', 'mlp.gate_proj'],
-                          'self_attn.vproj': 'self_attn.o_proj',
-                          'self_attn.q_proj': 'self_attn.k_proj'}
       model_name: "meta-llama/Llama-2-7b-hf" # Model name from hf or model path
       alpha: 0.5
       act_scales: 'act_scales/Omniquant-Llama-2-7b-hf.pt'
       act_shifts: 'act_shifts/Omniquant-Llama-2-7b-hf.pt'
       net: 'Llama-2-7b-hf'
       layer_name_prefix: 'model.layers'
-
       nsamples: 128
       calib_dataset: 'wikitext2'
       seed: 2
