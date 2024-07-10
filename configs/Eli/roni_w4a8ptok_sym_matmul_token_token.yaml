@@ -1,0 +1,32 @@
+QAT:
+    fully_quantized: False
+    device: 'cuda'
+    data_quantization:
+      status: On
+      bits: 8
+      custom_bits: {'lm_head': 8}
+      symmetric: On
+      per_channel: True
+      quantization_mode: 'dynamic'
+      observer: 'MinMax'
+    weights_quantization:
+      status: On
+      bits: 4
+      custom_bits: {'lm_head': 8}
+      symmetric: On
+      per_channel: False
+      quant_and_freeze: False
+
+    matmul_quantization:
+      #  input_1     x   input_2    =   output
+      # 4D case:
+      # (b, h, m, n) x (b, h, n, p) = (b, h, m, p)
+      # (b, h, m, 1)   (b, h, 1, 1) <- scale factors
+      input_1: # per token per head
+        bits: 8
+        symmetric: On
+        dims: [ 0, -1 ]
+      input_2: # per token per head
+        bits: 8
+        symmetric: On
+        dims: [ 0, -2 ]

@@ -1,0 +1,54 @@
+QAT:
+    fully_quantized: False
+    device: 'cuda'
+    data_quantization:
+      status: On
+      bits: 8
+      custom_bits: {'lm_head': 8}
+      symmetric: Off
+      per_channel: True
+      quantization_mode: 'dynamic'
+      observer: 'MinMax'
+    weights_quantization:
+      status: On
+      bits: 4
+      custom_bits: {'lm_head': 8}
+      symmetric: On
+      per_channel: True
+      quant_and_freeze: False
+
+    matmul_quantization:
+      #  input_1     x   input_2    =   output
+      # 4D case:
+      # (b, h, m, n) x (b, h, n, p) = (b, h, m, p)
+      # (b, h, m, 1)   (b, h, 1, 1) <- scale factors
+      input_1: # per token per head
+        bits: 8
+        symmetric: Off
+        dims: [ 0, -1 ]
+      input_2: # per token per head
+        bits: 8
+        symmetric: Off
+        dims: [ 0, -2 ]
+
+    OmniQuant:
+      model_name: "meta-llama/Llama-2-7b-hf" # Model name from hf or model path
+      alpha: 0.5
+      act_scales: 'act_scales/Omniquant-Llama-2-7b-hf.pt'
+      act_shifts: 'act_shifts/Omniquant-Llama-2-7b-hf.pt'
+      net: 'Llama-2-7b-hf'
+      layer_name_prefix: 'model.layers'
+      nsamples: 128
+      calib_dataset: 'wikitext2'
+      seed: 2
+      batch_size: 1
+      epochs: 0
+      let_lr: 0.001
+      lwc_lr: 0.01
+      wd: 0
+      deactive_amp: True
+      let: True
+      lwc: True
+      cache_dir: 'cache'
+      output_dir: 'log/llama2-7b-e20-lwc_weights-sym_act_asym'
+      resume: 'log/llama2-7b-e20-lwc_weights-sym_act_asym/omni_parameters.pth'
