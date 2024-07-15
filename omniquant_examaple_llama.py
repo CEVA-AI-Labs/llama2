@@ -27,11 +27,13 @@ def main():
 
     root = os.path.abspath(__file__).rsplit(os.path.sep, 1)[0]
 
-    conf = load_config(os.path.join(root, "test_config_llama.yaml"))
+    # conf = load_config(os.path.join(root, "test_config_llama.yaml"))
+    # conf = load_config(os.path.join(root, "configs/Eli/omniquant.yaml"))
+    conf = load_config(os.path.join(root, "configs/Eli/omniquant_w8a8_matmul8_B_asym_lm_head_16_alpha_0p8.yaml"))
 
     model_quantized = RetrainerModel(model, config=RetrainerConfig(conf)).to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_dir, use_fast=False, legacy=False)
-    ppl = evaluate(model_quantized, tokenizer, seq_len=2048)
+    ppl = evaluate(model_quantized, tokenizer, seq_len=1024)
     print(ppl)
     print('Done')
 

@@ -3,8 +3,10 @@ This module is used to evaluate the perplexity of the quantized Llama-2-7b model
 quantization configurations.
 """
 import torch
-from transformers import LlamaForCausalLM, LlamaTokenizer, OPTForCausalLM, AutoTokenizer
-from transformers.models.llama.modeling_llama import LlamaDecoderLayer
+# from transformers import LlamaForCausalLM, LlamaTokenizer, OPTForCausalLM, AutoTokenizer
+# from transformers.models.llama.modeling_llama import LlamaDecoderLayer
+from ceva_modeling_llama import LlamaForCausalLM, LlamaDecoderLayer
+from transformers import LlamaTokenizer
 from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
 import csv
@@ -52,11 +54,12 @@ if __name__ == '__main__':
         # 'configs/Eli/smoothquant_w8a8.yaml'
 
         # W8A8
-        'configs/Eli/roni_w8a8ptok_sym_matmul_token_tensor.yaml',
+        # 'configs/Eli/roni_w8a8ptok_sym_matmul_token_tensor.yaml',
         # 'configs/Eli/roni_w8a8ptok_asym_matmul_token_tensor.yaml',
         # 'configs/Eli/roni_w8a8ptok_sym_matmul_token_token.yaml',
         # 'configs/Eli/roni_w8a8ptok_asym_matmul_token_token.yaml',
         # 'configs/Eli/roni_w8ptoka8ptok_asym_matmul_token_token.yaml'
+        'configs/Eli/roni_w8a8ptok_sym_matmul_token_no_head_tensor.yaml',
 
         # W4A8
         # 'configs/Eli/roni_w4a8ptok_sym_matmul_token_tensor.yaml',
