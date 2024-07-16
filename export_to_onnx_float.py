@@ -41,7 +41,7 @@ def prepare_decoder_attention_mask(attention_mask, input_shape, inputs_embeds, p
     return combined_attention_mask
 
 
-def create_inputs(tokens, stage, dtype):
+def create_inputs(tokens, stage, dtype, device):
     if stage == 'prompt':
         # Prompt stage
         input_embeds = torch.rand((1, tokens, 4096), dtype=dtype)
@@ -70,42 +70,43 @@ def create_inputs(tokens, stage, dtype):
     return model_inputs
 
 
-model_dir = 'meta-llama/Llama-2-7b-hf'
-print('Loading model')
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-stage = 'prompt'  # 'prompt' or 'decode'
-# model = LlamaForCausalLM.from_pretrained('meta-llama/Llama-2-7b-hf', device_map='auto', torch_dtype=torch.float16)
-model = LlamaForCausalLM.from_pretrained('meta-llama/Llama-2-7b-hf', device_map='auto', torch_dtype=torch.float32)
-tokenizer = AutoTokenizer.from_pretrained('meta-llama/Llama-2-7b-hf')
-model.eval()
+if __name__ == '__main__':
+    model_dir = 'meta-llama/Llama-2-7b-hf'
+    print('Loading model')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    stage = 'prompt'  # 'prompt' or 'decode'
+    # model = LlamaForCausalLM.from_pretrained('meta-llama/Llama-2-7b-hf', device_map='auto', torch_dtype=torch.float16)
+    model = LlamaForCausalLM.from_pretrained('meta-llama/Llama-2-7b-hf', device_map='auto', torch_dtype=torch.float32)
+    tokenizer = AutoTokenizer.from_pretrained('meta-llama/Llama-2-7b-hf')
+    model.eval()
 
-# Input to the model
-tokens = 1024
-model_inputs = create_inputs(tokens, stage, dtype=torch.float32)
-# model_inputs = torch.rand((1, tokens, 4096), dtype=torch.float16)
+    # Input to the model
+    tokens = 1024
+    model_inputs = create_inputs(tokens, stage, dtype=torch.float32, device=device)
+    # model_inputs = torch.rand((1, tokens, 4096), dtype=torch.float16)
 
-# replace_norm(model)
-# model.to(device)
-# model = model.half()
+    # replace_norm(model)
+    # model.to(device)
+    # model = model.half()
 
-print('Modified model:')
-print(model)
-for name, module in model.named_modules():
-    print(name)
-    if isinstance(module, LlamaDecoderLayer) or name == 'model.norm' or name == 'lm_head':
-        torch.onnx.export(module,  # model being run
-                            model_inputs,  # model input (or a tuple for multiple inputs)
-                            # f'/projects/vbu_projects/users/royj/LinuxProjects/onnx_model/Llama2DecoderFP16_tokens_{tokens}/{name}_{stage}.onnx',  # where to save the model (can be a file or file-like object)
-                            # f'/projects/vbu_projects/users/royj/LinuxProjects/onnx_model/Llama2DecoderFP16_debug/{name}_{stage}.onnx',  # where to save the model (can be a file or file-like object)
-                            f'/projects/vbu_projects/users/royj/LinuxProjects/onnx_model/Llama2DecoderFP32/{name}_{stage}_v2.onnx',  # where to save the model (can be a file or file-like object)
-                            # do_constant_folding=True,  # whether to execute constant folding for optimization
-                            # input_names=['input'],  # the model's input names
-                            input_names=['hidden_states', 'attention_mask', 'position_ids', 'key_cache', 'value_cache'],
-                            output_names=['output', 'key_cache_out', 'value_cache_out'],  # the model's output names
-                            # dynamic_axes={'input': {0 : 'batch_size', 1: 'num_tokens'},    # variable length axes
-                            #                 'output' : {0 : 'batch_size', 1: 'num_tokens'}}
-                          )
-        break
+    print('Modified model:')
+    print(model)
+    for name, module in model.named_modules():
+        print(name)
+        if isinstance(module, LlamaDecoderLayer) or name == 'model.norm' or name == 'lm_head':
+            torch.onnx.export(module,  # model being run
+                                model_inputs,  # model input (or a tuple for multiple inputs)
+                                # f'/projects/vbu_projects/users/royj/LinuxProjects/onnx_model/Llama2DecoderFP16_tokens_{tokens}/{name}_{stage}.onnx',  # where to save the model (can be a file or file-like object)
+                                # f'/projects/vbu_projects/users/royj/LinuxProjects/onnx_model/Llama2DecoderFP16_debug/{name}_{stage}.onnx',  # where to save the model (can be a file or file-like object)
+                                f'/projects/vbu_projects/users/royj/LinuxProjects/onnx_model/Llama2DecoderFP32/{name}_{stage}_v2.onnx',  # where to save the model (can be a file or file-like object)
+                                # do_constant_folding=True,  # whether to execute constant folding for optimization
+                                # input_names=['input'],  # the model's input names
+                                input_names=['hidden_states', 'attention_mask', 'position_ids', 'key_cache', 'value_cache'],
+                                output_names=['output', 'key_cache_out', 'value_cache_out'],  # the model's output names
+                                # dynamic_axes={'input': {0 : 'batch_size', 1: 'num_tokens'},    # variable length axes
+                                #                 'output' : {0 : 'batch_size', 1: 'num_tokens'}}
+                              )
+            break
 
 
-print('Finished exporting model.')
+    print('Finished exporting model.')
