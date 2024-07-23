@@ -206,16 +206,19 @@ def rotate_half(x):
     return torch.cat((x2, x1), dim=-1)  # Added negation in the _set_cos_sin_cache function
 
 
-def apply_rotary_pos_emb(q, k, cos, sin, position_ids):
+def apply_rotary_pos_emb(q, k, cos, sin, position_ids, mul, add):
     # The first two dimensions of cos and sin are always 1, so we can `squeeze` them.
     # cos = cos.squeeze(1).squeeze(0)  # [seq_len, dim]
     # sin = sin.squeeze(1).squeeze(0)  # [seq_len, dim]
     # cos = cos[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
     # sin = sin[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
     # q_embed = (q * cos) + (rotate_half(q) * sin)
-    q_embed = (q * cos) + (rotate_half(q * sin))  # TODO: Add QuantMul here
+    # q_embed = (q * cos) + (rotate_half(q * sin))  # TODO: Add QuantMul here
+    q_embed = add(mul(q, cos), (rotate_half(mul(q, sin))))  # TODO: Add QuantMul here
+
     # k_embed = (k * cos) + (rotate_half(k) * sin)
-    k_embed = (k * cos) + (rotate_half(k * sin))  # TODO: Add QuantMul here
+    # k_embed = (k * cos) + (rotate_half(k * sin))  # TODO: Add QuantMul here
+    k_embed = add(mul(k, cos), (rotate_half(mul(k, sin))))  # TODO: Add QuantMul here
     return q_embed, k_embed
 
 
@@ -250,8 +253,8 @@ class LlamaMLP(nn.Module):
             ]
             down_proj = sum(down_proj)
         else:
-            down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))  # TODO: Add QuantMul here
-            # down_proj = self.down_proj(self.mul(self.act_fn(self.gate_proj(x)), self.up_proj(x)))  # TODO: Add QuantMul here
+            # down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))  # TODO: Add QuantMul here
+            down_proj = self.down_proj(self.mul(self.act_fn(self.gate_proj(x)), self.up_proj(x)))  # TODO: Add QuantMul here
 
         return down_proj
 
@@ -292,6 +295,8 @@ class LlamaAttention(nn.Module):
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
         self.matmul = LiteMLMatmul()
+        self.mul = LiteMLMul()
+        self.add = LiteMLAdd()
         # self.softmax = nn.Softmax(dim=-1)
         self._init_rope()
 
@@ -368,7 +373,7 @@ class LlamaAttention(nn.Module):
             kv_seq_len += past_key_value[0].shape[-2]
         # cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
         cos, sin = self.rotary_emb.cos_cached, self.rotary_emb.sin_cached
-        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids)
+        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids, self.mul, self.add)
 
         if past_key_value is not None:
             # reuse k, v, self_attention
@@ -656,15 +661,15 @@ class LlamaDecoderLayer(nn.Module):
             use_cache=use_cache,
             padding_mask=padding_mask,
         )
-        hidden_states = residual + hidden_states
-        # hidden_states = self.add(residual, hidden_states)  # TODO: Add QuantAdd here
+        # hidden_states = residual + hidden_states
+        hidden_states = self.add(residual, hidden_states)  # TODO: Add QuantAdd here
 
         # Fully Connected
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
-        hidden_states = residual + hidden_states
-        # hidden_states = self.add(residual, hidden_states)  # TODO: Add QuantAdd here
+        # hidden_states = residual + hidden_states
+        hidden_states = self.add(residual, hidden_states)  # TODO: Add QuantAdd here
 
         outputs = (hidden_states,)
 
