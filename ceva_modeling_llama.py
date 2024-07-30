@@ -2,7 +2,7 @@
 # Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
 #
 # This code is based on EleutherAI's GPT-NeoX library and the GPT-NeoX
-# and OPT implementations in this library. It has been modified from its
+# and OPT implementations in this library. It has been modified from itsבו
 # original forms to accommodate minor architectural differences compared
 # to GPT-NeoX and OPT used by the Meta AI team that trained the model.
 #
@@ -34,16 +34,12 @@ from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.utils import (
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
-    is_flash_attn_available,
     logging,
     replace_return_docstrings,
 )
 from transformers.models.llama.configuration_llama import LlamaConfig
-from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd, LiteMLMul
+from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd       #, LiteMLMul
 
-if is_flash_attn_available():
-    from flash_attn import flash_attn_func, flash_attn_varlen_func
-    from flash_attn.bert_padding import index_first_axis, pad_input, unpad_input  # noqa
 
 
 logger = logging.get_logger(__name__)
@@ -230,7 +226,7 @@ class LlamaMLP(nn.Module):
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         # self.act_fn = ACT2FN[config.hidden_act]
         self.act_fn = nn.SiLU()  # TODO: Replace SiLU Activation with torch.nn.SiLU
-        self.mul = LiteMLMul()
+        #self.mul = LiteMLMul()   XXX
 
     def forward(self, x):
         if self.config.pretraining_tp > 1:
@@ -250,7 +246,8 @@ class LlamaMLP(nn.Module):
             ]
             down_proj = sum(down_proj)
         else:
-            down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))  # TODO: Add QuantMul here
+            down_proj = self.down_proj(self.act_fn(self.gate_proj(x)).to(self.gate_proj(x).device) * self.up_proj(x).to(self.gate_proj(x).device))  # TODO: Add QuantMul here
+            #down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
             # down_proj = self.down_proj(self.mul(self.act_fn(self.gate_proj(x)), self.up_proj(x)))  # TODO: Add QuantMul here
 
         return down_proj
