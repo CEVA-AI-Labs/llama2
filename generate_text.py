@@ -47,7 +47,7 @@ if __name__ == '__main__':
     tokenizer = LlamaTokenizer.from_pretrained(model_dir)
 
     # Select the configuration you wish to test
-    config_name = 'float'
+    # config_name = 'float'
     # config_name = 'configs/smoothquant_w8a8_per_channel_per_channel_dynamic.yaml'
     # config_name = 'configs/smoothquant_w8a8_per_channel_per_tensor_matmul_dynamic.yaml'
     # config_name = 'configs/smoothquant_w8a8_per_channel_per_tensor_matmul_static.yaml'
@@ -59,6 +59,7 @@ if __name__ == '__main__':
     # config_name = 'configs/w8a8_per_tensor_per_channel_dynamic.yaml'  # ?
     # config_name = 'configs/Eli/roni_w8a8ptok_sym_matmul_token_tensor.yaml'
     # config_name = 'configs/Eli/roni_w8ptoka8ptok_asym_matmul_token_token.yaml'
+    config_name = 'configs/Eli/static_roni_w8a8ptok_sym_matmul_token_no_head_tensor.yaml'
 
     # config_name = 'test_config_llama.yaml'
 
