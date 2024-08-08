@@ -59,7 +59,18 @@ if __name__ == '__main__':
         # 'configs/Eli/roni_w8a8ptok_sym_matmul_token_token.yaml',
         # 'configs/Eli/roni_w8a8ptok_asym_matmul_token_token.yaml',
         # 'configs/Eli/roni_w8ptoka8ptok_asym_matmul_token_token.yaml'
-        'configs/Eli/roni_w8a8ptok_sym_matmul_token_no_head_tensor.yaml',
+        # 'configs/Eli/roni_w8a8ptok_sym_matmul_token_no_head_tensor.yaml'  # The dynamic configuration
+
+        # W8A8 static
+        # 'configs/Eli/static_roni_w8a8_sym_matmul_no_head_tensor.yaml',
+        # 'configs/Eli/static_roni_w8a8_sym_matmul_tensor.yaml',
+        # 'configs/Eli/static_roni_w8a8_sym_matmul_token.yaml',
+        # 'configs/Eli/static_roni_w8a8ptok_sym_matmul_token.yaml',
+        # 'configs/Eli/static_roni_w8a8ptok_asym_matmul_token.yaml',
+        'configs/Eli/static_roni_w8a8ptok_sym_matmul_token_no_head_tensor.yaml',  # The mixed dynamic and static conf
+        # 'configs/Eli/static_roni_W8ptokA8_sym_matmul_token.yaml',
+        # 'configs/Eli/static_roni_W8ptokA8_sym_matmul_token_no_head_tensor.yaml',
+        # 'configs/Eli/static_smoothquant_roni_w8a8ptok_sym_matmul_token.yaml',
 
         # W4A8
         # 'configs/Eli/roni_w4a8ptok_sym_matmul_token_tensor.yaml',

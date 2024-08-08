@@ -213,12 +213,12 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, mul, add):
     # cos = cos[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
     # sin = sin[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
     # q_embed = (q * cos) + (rotate_half(q) * sin)
-    # q_embed = (q * cos) + (rotate_half(q * sin))  # TODO: Add QuantMul here
-    q_embed = add(mul(q, cos), (rotate_half(mul(q, sin))))  # TODO: Add QuantMul here
+    # q_embed = (q * cos) + (rotate_half(q * sin))  # Without quantization
+    q_embed = add(mul(q, cos), (rotate_half(mul(q, sin))))  # with quantization
 
     # k_embed = (k * cos) + (rotate_half(k) * sin)
-    # k_embed = (k * cos) + (rotate_half(k * sin))  # TODO: Add QuantMul here
-    k_embed = add(mul(k, cos), (rotate_half(mul(k, sin))))  # TODO: Add QuantMul here
+    # k_embed = (k * cos) + (rotate_half(k * sin))  # Without quantization
+    k_embed = add(mul(k, cos), (rotate_half(mul(k, sin))))  # with quantization
     return q_embed, k_embed
 
 
@@ -294,7 +294,8 @@ class LlamaAttention(nn.Module):
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
-        self.matmul = LiteMLMatmul()
+        self.matmul_qkt = LiteMLMatmul()
+        self.matmul_pv = LiteMLMatmul()
         self.mul = LiteMLMul()
         self.add = LiteMLAdd()
         # self.softmax = nn.Softmax(dim=-1)
@@ -386,7 +387,7 @@ class LlamaAttention(nn.Module):
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
         # attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
-        attn_weights = self.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        attn_weights = self.matmul_qkt(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
 
         if attn_weights.size() != (bsz, self.num_heads, q_len, kv_seq_len):
             raise ValueError(
@@ -406,7 +407,7 @@ class LlamaAttention(nn.Module):
         # attn_weights = self.softmax(attn_weights).to(query_states.dtype)  # Doesn't work because -65504 values create scale_factor=inf
         # attn_output = torch.matmul(attn_weights, value_states)
         # attn_output = self.matmul(attn_weights, value_states, dims1=[0, -1, -2], dims2=[0, -1]) # in1 per-tensor, in2 per-token
-        attn_output = self.matmul(attn_weights, value_states) # in1 per-tensor, in2 per-token
+        attn_output = self.matmul_pv(attn_weights, value_states) # in1 per-tensor, in2 per-token
 
         if attn_output.size() != (bsz, self.num_heads, q_len, self.head_dim):
             raise ValueError(
@@ -621,7 +622,8 @@ class LlamaDecoderLayer(nn.Module):
         self.mlp = LlamaMLP(config)
         self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.add = LiteMLAdd()
+        self.add_1 = LiteMLAdd()
+        self.add_2 = LiteMLAdd()
 
     def forward(
         self,
@@ -662,14 +664,14 @@ class LlamaDecoderLayer(nn.Module):
             padding_mask=padding_mask,
         )
         # hidden_states = residual + hidden_states
-        hidden_states = self.add(residual, hidden_states)  # TODO: Add QuantAdd here
+        hidden_states = self.add_1(residual, hidden_states)  # TODO: Add QuantAdd here
 
         # Fully Connected
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
         # hidden_states = residual + hidden_states
-        hidden_states = self.add(residual, hidden_states)  # TODO: Add QuantAdd here
+        hidden_states = self.add_2(residual, hidden_states)  # TODO: Add QuantAdd here
 
         outputs = (hidden_states,)
 
