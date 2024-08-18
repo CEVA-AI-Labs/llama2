@@ -39,6 +39,7 @@ from transformers.utils import (
 )
 from transformers.models.llama.configuration_llama import LlamaConfig
 from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd       #, LiteMLMul
+from liteml.ailabs_qat.layers.liteml_layers_quant import compFlowSoftmax
 
 
 
@@ -289,7 +290,7 @@ class LlamaAttention(nn.Module):
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
         self.matmul = LiteMLMatmul()
-        # self.softmax = nn.Softmax(dim=-1)
+        self.softmax = nn.Softmax()
         self._init_rope()
 
     def _init_rope(self):
@@ -394,8 +395,8 @@ class LlamaAttention(nn.Module):
             attn_weights = attn_weights + attention_mask
 
         # upcast attention to fp32
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
-        # attn_weights = self.softmax(attn_weights).to(query_states.dtype)  # Doesn't work because -65504 values create scale_factor=inf
+        #attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        attn_weights = self.softmax(attn_weights).to(query_states.dtype)  # Doesn't work because -65504 values create scale_factor=inf
         # attn_output = torch.matmul(attn_weights, value_states)
         # attn_output = self.matmul(attn_weights, value_states, dims1=[0, -1, -2], dims2=[0, -1]) # in1 per-tensor, in2 per-token
         attn_output = self.matmul(attn_weights, value_states) # in1 per-tensor, in2 per-token
