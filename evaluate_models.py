@@ -75,7 +75,7 @@ if __name__ == '__main__':
         # W4A8
         # 'configs/Eli/roni_w4a8ptok_sym_matmul_token_tensor.yaml',
         # 'configs/Eli/roni_w4a8ptok_asym_matmul_token_tensor.yaml',
-        # 'configs/Eli/roni_w4a8ptok_sym_matmul_token_token.yaml',
+        # 'configs/Eli/roni_w4a8ptok_sym_matmul_token_token.yaml',ּ
         # 'configs/Eli/roni_w4a8ptok_asym_matmul_token_token.yaml',
         # 'configs/Eli/roni_w4ptoka8ptok_asym_matmul_token_token.yaml'
 
