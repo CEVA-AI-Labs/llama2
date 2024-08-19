@@ -39,7 +39,7 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 from transformers.models.llama.configuration_llama import LlamaConfig
-from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd, LiteMLMul
+from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd, LiteMLMul, LiteMLAddStatic
 
 if is_flash_attn_available():
     from flash_attn import flash_attn_func, flash_attn_varlen_func
@@ -206,7 +206,7 @@ def rotate_half(x):
     return torch.cat((x2, x1), dim=-1)  # Added negation in the _set_cos_sin_cache function
 
 
-def apply_rotary_pos_emb(q, k, cos, sin, position_ids, mul, add):
+def apply_rotary_pos_emb(q, k, cos, sin, position_ids, mul_q_cos, mul_q_sin, mul_k_cos, mul_k_sin, add_q, add_k):
     # The first two dimensions of cos and sin are always 1, so we can `squeeze` them.
     # cos = cos.squeeze(1).squeeze(0)  # [seq_len, dim]
     # sin = sin.squeeze(1).squeeze(0)  # [seq_len, dim]
@@ -214,11 +214,11 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, mul, add):
     # sin = sin[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
     # q_embed = (q * cos) + (rotate_half(q) * sin)
     # q_embed = (q * cos) + (rotate_half(q * sin))  # Without quantization
-    q_embed = add(mul(q, cos), (rotate_half(mul(q, sin))))  # with quantization
+    q_embed = add_q(mul_q_cos(q, cos), (rotate_half(mul_q_sin(q, sin))))  # with quantization
 
     # k_embed = (k * cos) + (rotate_half(k) * sin)
     # k_embed = (k * cos) + (rotate_half(k * sin))  # Without quantization
-    k_embed = add(mul(k, cos), (rotate_half(mul(k, sin))))  # with quantization
+    k_embed = add_k(mul_k_cos(k, cos), (rotate_half(mul_k_sin(k, sin))))  # with quantization
     return q_embed, k_embed
 
 
@@ -296,8 +296,14 @@ class LlamaAttention(nn.Module):
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
         self.matmul_qkt = LiteMLMatmul()
         self.matmul_pv = LiteMLMatmul()
-        self.mul = LiteMLMul()
-        self.add = LiteMLAdd()
+        self.rotary_mul_q_sin = LiteMLMul()
+        self.rotary_mul_q_cos = LiteMLMul()
+        self.rotary_mul_k_sin = LiteMLMul()
+        self.rotary_mul_k_cos = LiteMLMul()
+        # self.rotary_add_q = LiteMLAdd()
+        self.rotary_add_q = LiteMLAddStatic()
+        # self.rotary_add_k = LiteMLAdd()
+        self.rotary_add_k = LiteMLAddStatic()
         # self.softmax = nn.Softmax(dim=-1)
         self._init_rope()
 
@@ -374,7 +380,14 @@ class LlamaAttention(nn.Module):
             kv_seq_len += past_key_value[0].shape[-2]
         # cos, sin = self.rotary_emb(value_states, seq_len=kv_seq_len)
         cos, sin = self.rotary_emb.cos_cached, self.rotary_emb.sin_cached
-        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids, self.mul, self.add)
+        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin, position_ids,
+                                                        self.rotary_mul_q_cos,
+                                                        self.rotary_mul_q_sin,
+                                                        self.rotary_mul_k_cos,
+                                                        self.rotary_mul_k_sin,
+                                                        self.rotary_add_q,
+                                                        self.rotary_add_k
+                                                        )
 
         if past_key_value is not None:
             # reuse k, v, self_attention
