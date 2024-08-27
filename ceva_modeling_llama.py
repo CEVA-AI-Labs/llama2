@@ -39,7 +39,7 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 from transformers.models.llama.configuration_llama import LlamaConfig
-from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd, LiteMLMul, LiteMLAddStatic
+from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd, LiteMLMul, LiteMLAddStatic, LiteMLMatmulOutputQuant, LiteMLAddMask
 
 if is_flash_attn_available():
     from flash_attn import flash_attn_func, flash_attn_varlen_func
@@ -295,7 +295,7 @@ class LlamaAttention(nn.Module):
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
         self.matmul_qkt = LiteMLMatmul()
-        self.matmul_pv = LiteMLMatmul()
+        self.matmul_pv = LiteMLMatmulOutputQuant()  # LiteMLMatmul()
         self.rotary_mul_q_sin = LiteMLMul()
         self.rotary_mul_q_cos = LiteMLMul()
         self.rotary_mul_k_sin = LiteMLMul()
@@ -305,6 +305,7 @@ class LlamaAttention(nn.Module):
         # self.rotary_add_k = LiteMLAdd()
         self.rotary_add_k = LiteMLAddStatic()
         # self.softmax = nn.Softmax(dim=-1)
+        self.add_mask = LiteMLAddMask()
         self._init_rope()
 
     def _init_rope(self):
@@ -413,7 +414,8 @@ class LlamaAttention(nn.Module):
                 raise ValueError(
                     f"Attention mask should be of size {(bsz, 1, q_len, kv_seq_len)}, but is {attention_mask.size()}"
                 )
-            attn_weights = attn_weights + attention_mask
+            # attn_weights = attn_weights + attention_mask
+            attn_weights = self.add_mask(attn_weights, attention_mask)
 
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
