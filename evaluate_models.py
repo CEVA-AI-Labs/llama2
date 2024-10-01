@@ -38,7 +38,7 @@ if __name__ == '__main__':
     for config_name in config_list:
         print(config_name)
         print('Loading model')
-        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='cuda:0', torch_dtype=torch.float16)
+        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='cuda:0', torch_dtype=torch.float32)
         # model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float32)
         with torch.no_grad():
             if config_name != 'float':

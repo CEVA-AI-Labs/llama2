@@ -40,6 +40,7 @@ from transformers.utils import (
 from transformers.models.llama.configuration_llama import LlamaConfig
 from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd       #, LiteMLMul
 from liteml.ailabs_qat.layers.liteml_layers_quant import compFlowSoftmax
+from liteml.ailabs_qat.layers.liteml_layers_quant import compFlowLinear
 
 
 
@@ -285,6 +286,7 @@ class LlamaAttention(nn.Module):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
+        #self.q_proj = compFlowLinear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
         self.q_proj = nn.Linear(self.hidden_size, self.num_heads * self.head_dim, bias=config.attention_bias)
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
@@ -395,8 +397,8 @@ class LlamaAttention(nn.Module):
             attn_weights = attn_weights + attention_mask
 
         # upcast attention to fp32
-        #attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
-        attn_weights = self.softmax(attn_weights).to(query_states.dtype)  # Doesn't work because -65504 values create scale_factor=inf
+        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        #attn_weights = self.softmax(attn_weights).to(query_states.dtype)  # Doesn't work because -65504 values create scale_factor=inf
         # attn_output = torch.matmul(attn_weights, value_states)
         # attn_output = self.matmul(attn_weights, value_states, dims1=[0, -1, -2], dims2=[0, -1]) # in1 per-tensor, in2 per-token
         attn_output = self.matmul(attn_weights, value_states) # in1 per-tensor, in2 per-token
@@ -938,6 +940,7 @@ class LlamaModel(LlamaPreTrainedModel):
                     create_custom_forward(decoder_layer), hidden_states, attention_mask, position_ids
                 )
             else:
+
                 layer_outputs = decoder_layer(
                     hidden_states,
                     attention_mask=attention_mask,

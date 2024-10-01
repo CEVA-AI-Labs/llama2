@@ -50,6 +50,7 @@ def evaluate(model: LlamaForCausalLM, tokenizer: LlamaTokenizer, seq_len=2048) -
     if os.path.exists(cache_testloader):
         testloader = torch.load(cache_testloader)
     else:
+        #test = load_dataset("wikitext", "wikitext-2-raw-v1", split="test[0:10%]")
         test = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
         testloader = tokenizer("\n\n".join(test["text"]), return_tensors="pt")
         if not os.path.exists('cache'):
