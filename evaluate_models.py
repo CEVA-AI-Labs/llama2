@@ -30,7 +30,8 @@ if __name__ == '__main__':
         # 'configs/Eli/roni_w8ptoka8ptok_asym_matmul_token_token.yaml'
         #'configs/Eli/roni_w8a8ptok_sym_matmul_token_no_head_tensor.yaml',
         #'configs/Rana/w16a16_CSTL16.yaml',
-        'configs/Rana/Float_SiLu.yaml',
+        #'configs/Rana/Float_SiLu.yaml',
+        'configs/Rana/fack_quant_RMSnorm.yaml',
         #'float'
         ####here
     ]
@@ -38,7 +39,7 @@ if __name__ == '__main__':
     for config_name in config_list:
         print(config_name)
         print('Loading model')
-        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='cuda:0', torch_dtype=torch.float32)
+        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='cuda:0', torch_dtype=torch.float16)
         # model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float32)
         with torch.no_grad():
             if config_name != 'float':
@@ -58,6 +59,30 @@ if __name__ == '__main__':
 
             # model._model._model.lm_head.set_weights_quant(False)
             # model._model._model.lm_head.set_data_quant(False)
+            #pass
+            #for i in range(0,32):
+            #    print("layer[" + str(i) + "] max:")
+            #    print(model._model._model.model.layers[i].input_layernorm._quantizer_mean.obs.max_val)
+            #    print(model._model._model.model.layers[i].post_attention_layernorm._quantizer_mean.obs.max_val)
+            #    print("layer[" + str(i) + "] min:")
+            #    print(model._model._model.model.layers[i].input_layernorm._quantizer_mean.obs.min_val)
+            #    print(model._model._model.model.layers[i].post_attention_layernorm._quantizer_mean.obs.min_val)
+            if "fack_quant_RMSnorm" in config_name:
+                layers = model._model._model.model.layers
+                for layer in layers:
+                    ### if the min input in the layer is smaller than value x (0.03125 give best results), choose alpha, otherwise alpha=1
+                    layernorm = layer.input_layernorm
+                    min_layernorm = layer.input_layernorm._quantizer_mean.obs.min_val
+                    if min_layernorm < 0.03125:
+                        alpha_layernorm = 0.03125 / min_layernorm
+                        layer.input_layernorm._alpha = alpha_layernorm
+
+                    post_attn = layer.post_attention_layernorm
+                    min_post_attn = layer.post_attention_layernorm._quantizer_mean.obs.min_val
+                    if min_post_attn < 0.03125:
+                        alpha_post_attn = 0.03125 / min_post_attn
+                        layer.post_attention_layernorm._alpha = alpha_post_attn
+
             ppl = evaluate(model, tokenizer, seq_len=seq_len)
             print(f'Model {config_name}')
             print(f'Perplexity: {ppl:.4}')
