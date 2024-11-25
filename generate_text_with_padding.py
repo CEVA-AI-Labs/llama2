@@ -12,6 +12,8 @@ from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
 from utils import get_calibration_loader
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+torch.manual_seed(2)
+
 
 def generate_text(prompt, model, tokenizer):
     print('Initializing pipeline')
@@ -41,8 +43,8 @@ def generate_text(prompt, model, tokenizer):
 
 
 if __name__ == '__main__':
-    model_dir = 'meta-llama/Llama-2-7b-hf'
-    # model_dir = 'meta-llama/Llama-2-7b-chat-hf'
+    # model_dir = 'meta-llama/Llama-2-7b-hf'
+    model_dir = 'meta-llama/Llama-2-7b-chat-hf'
     # prompt = 'The meaning of life is'
     # prompt = ['How are you', 'The meaning of life is']
     # prompt = ["A list of colors: red, blue", "Portugal is"]
@@ -70,6 +72,9 @@ if __name__ == '__main__':
 
     # Resize the embeddings
     model.resize_token_embeddings(len(tokenizer))
+
+    # Set embeddings of pad token to zero
+    model.model.embed_tokens.weight.data[-1] = torch.zeros_like(model.model.embed_tokens.weight[-1])
 
     # Configure the pad token in the model
     model.config.pad_token_id = tokenizer.pad_token_id

@@ -4,12 +4,15 @@ This module demonstrates text generation with the quantized Llama2-7b-chat model
 import torch
 import transformers
 from transformers import LlamaForCausalLM, LlamaTokenizer, OPTForCausalLM, AutoTokenizer
+# from transformers import LlamaTokenizer, OPTForCausalLM, AutoTokenizer
+# from ceva_modeling_llama import LlamaForCausalLM
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer
 import time
 from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
 from utils import get_calibration_loader
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+torch.manual_seed(2)
 
 def generate_text(prompt, model, tokenizer):
     print('Initializing pipeline')

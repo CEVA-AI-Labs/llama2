@@ -7,8 +7,8 @@ QAT:
       custom_bits: {'lm_head': 8}
       symmetric: Off
       per_channel: True
-      quantization_mode: 'dynamic'
-      observer: 'MinMax'
+      quantization_mode: 'static'
+      observer: 'MovingAverage'
     weights_quantization:
       status: On
       bits: 4
@@ -26,7 +26,7 @@ QAT:
         bits: 8
         symmetric: Off
         dims: [ 0, -1 ]
-      input_2: # per token per head
+      input_2: # per tensor per head
         bits: 8
         symmetric: Off
-        dims: [ 0, -2 ]
+        dims: [ 0, -2, -3 ]
