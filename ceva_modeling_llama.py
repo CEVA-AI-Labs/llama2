@@ -214,6 +214,12 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids, mul_q_cos, mul_q_sin, mul
     # sin = sin[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
     # q_embed = (q * cos) + (rotate_half(q) * sin)
     # q_embed = (q * cos) + (rotate_half(q * sin))  # Without quantization
+    if position_ids.shape[1] == 1:
+        cos = cos.squeeze(1).squeeze(0)  # [seq_len, dim]
+        sin = sin.squeeze(1).squeeze(0)  # [seq_len, dim]
+        cos = cos[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
+        sin = sin[position_ids].unsqueeze(1)  # [bs, 1, seq_len, dim]
+    # q_embed = (q * cos) + (rotate_half(q * sin))  # Without quantization
     q_embed = add_q(mul_q_cos(q, cos), (rotate_half(mul_q_sin(q, sin))))  # with quantization
 
     # k_embed = (k * cos) + (rotate_half(k) * sin)
