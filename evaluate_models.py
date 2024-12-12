@@ -5,7 +5,7 @@ quantization configurations.
 import torch
 # from transformers import LlamaForCausalLM, LlamaTokenizer, OPTForCausalLM, AutoTokenizer
 # from transformers.models.llama.modeling_llama import LlamaDecoderLayer
-from ceva_modeling_llama import LlamaForCausalLM, LlamaDecoderLayer
+from ceva_modeling_llama import LlamaForCausalLM, LlamaDecoderLayer, LlamaRMSNorm
 from transformers import LlamaTokenizer
 from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
@@ -21,10 +21,12 @@ if __name__ == '__main__':
     # config_list contains the model that you want to compare. You can remove or add configurations to this list.
     config_list = [
         # 'float',
-        # 'configs/Eli/roni_w8a8ptok_sym_matmul_token_no_head_tensor.yaml'  # The dynamic configuration
-        'configs/Eli/static_roni_w8a8ptok_sym_matmul_token_no_head_tensor.yaml',  # The mixed dynamic and static conf
-
+        # 'configs/w8a8_per_tensor_per_token_dynamic.yaml',  # The dynamic configuration
+        # 'configs/w8a8_per_tensor_per_token_static.yaml',  # the static configuration
+        'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
     ]
+
+
     ppl_list = []
     for config_name in config_list:
         print(config_name)

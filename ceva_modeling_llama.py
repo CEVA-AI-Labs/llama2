@@ -39,7 +39,7 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 from transformers.models.llama.configuration_llama import LlamaConfig
-from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd, LiteMLMul, LiteMLAddStatic, LiteMLMatmulOutputQuant, LiteMLAddMask
+from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd, LiteMLMul, LlamaRMSNorm
 
 if is_flash_attn_available():
     from flash_attn import flash_attn_func, flash_attn_varlen_func
@@ -96,21 +96,21 @@ def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] 
     return inverted_mask.masked_fill(inverted_mask.to(torch.bool), torch.finfo(dtype).min)
 
 
-class LlamaRMSNorm(nn.Module):
-    def __init__(self, hidden_size, eps=1e-6):
-        """
-        LlamaRMSNorm is equivalent to T5LayerNorm
-        """
-        super().__init__()
-        self.weight = nn.Parameter(torch.ones(hidden_size))
-        self.variance_epsilon = eps
-
-    def forward(self, hidden_states):
-        input_dtype = hidden_states.dtype
-        hidden_states = hidden_states.to(torch.float32)
-        variance = hidden_states.pow(2).mean(-1, keepdim=True)
-        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
-        return self.weight * hidden_states.to(input_dtype)
+# class LlamaRMSNorm(nn.Module):
+#     def __init__(self, hidden_size, eps=1e-6):
+#         """
+#         LlamaRMSNorm is equivalent to T5LayerNorm
+#         """
+#         super().__init__()
+#         self.weight = nn.Parameter(torch.ones(hidden_size))
+#         self.variance_epsilon = eps
+#
+#     def forward(self, hidden_states):
+#         input_dtype = hidden_states.dtype
+#         hidden_states = hidden_states.to(torch.float32)
+#         variance = hidden_states.pow(2).mean(-1, keepdim=True)
+#         hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+#         return self.weight * hidden_states.to(input_dtype)
 
 
 ALL_LAYERNORM_LAYERS.append(LlamaRMSNorm)
@@ -301,17 +301,14 @@ class LlamaAttention(nn.Module):
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=config.attention_bias)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias)
         self.matmul_qkt = LiteMLMatmul()
-        self.matmul_pv = LiteMLMatmulOutputQuant()  # LiteMLMatmul()
+        self.matmul_pv = LiteMLMatmul()
         self.rotary_mul_q_sin = LiteMLMul()
         self.rotary_mul_q_cos = LiteMLMul()
         self.rotary_mul_k_sin = LiteMLMul()
         self.rotary_mul_k_cos = LiteMLMul()
-        # self.rotary_add_q = LiteMLAdd()
-        self.rotary_add_q = LiteMLAddStatic()
-        # self.rotary_add_k = LiteMLAdd()
-        self.rotary_add_k = LiteMLAddStatic()
-        # self.softmax = nn.Softmax(dim=-1)
-        self.add_mask = LiteMLAddMask()
+        self.rotary_add_q = LiteMLAdd()
+        self.rotary_add_k = LiteMLAdd()
+        self.add_mask = LiteMLAdd()
         self._init_rope()
 
     def _init_rope(self):
@@ -685,14 +682,14 @@ class LlamaDecoderLayer(nn.Module):
             padding_mask=padding_mask,
         )
         # hidden_states = residual + hidden_states
-        hidden_states = self.add_1(residual, hidden_states)  # TODO: Add QuantAdd here
+        hidden_states = self.add_1(residual, hidden_states)
 
         # Fully Connected
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
         # hidden_states = residual + hidden_states
-        hidden_states = self.add_2(residual, hidden_states)  # TODO: Add QuantAdd here
+        hidden_states = self.add_2(residual, hidden_states)
 
         outputs = (hidden_states,)
 
