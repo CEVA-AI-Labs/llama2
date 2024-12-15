@@ -5,7 +5,8 @@ quantization configurations.
 import torch
 # from transformers import LlamaForCausalLM, LlamaTokenizer, OPTForCausalLM, AutoTokenizer
 # from transformers.models.llama.modeling_llama import LlamaDecoderLayer
-from ceva_modeling_llama import LlamaForCausalLM, LlamaDecoderLayer, LlamaRMSNorm
+# from ceva_modeling_llama import LlamaForCausalLM, LlamaDecoderLayer, LlamaRMSNorm  # v4_34
+from ceva_modeling_llama_v4_46 import LlamaForCausalLM, LlamaDecoderLayer, LlamaRMSNorm  # v4_46
 from transformers import LlamaTokenizer
 from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
