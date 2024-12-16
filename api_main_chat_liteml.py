@@ -1,13 +1,17 @@
+"""
+This script is used to create chat application compatible with transformers version 4.46.
+It doesn't apply padding at all.
+It uses DynamicCache to store the chat history context.
+"""
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-# from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import LlamaTokenizer
-from ceva_modeling_llama import LlamaForCausalLM, LlamaDecoderLayer
+from ceva_modeling_llama_v4_46 import LlamaForCausalLM, LlamaDecoderLayer
 import torch
 from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
 from utils import get_calibration_loader
-from torch.nn.functional import pad
+from transformers.cache_utils import DynamicCache
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Define the input schema
@@ -22,31 +26,17 @@ app = FastAPI()
 # Load the Llama-2-7b-hf model and tokenizer
 MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"
 # config_name = 'float'
-config_name = 'configs/Eli/static_roni_w8a8ptok_sym_matmul_token_no_head_tensor.yaml' # The mixed dynamic and static conf
-
+# config_name = 'configs/w8a8_per_tensor_per_token_dynamic.yaml' # The dynamic quantization conf
+# config_name = 'configs/w8a8_static.yaml'  # the static quantization conf
+config_name = 'configs/w8a8_npm_v1_3_4.yaml' # The mixed dynamic and static conf
 
 try:
-    tokenizer = LlamaTokenizer.from_pretrained(MODEL_NAME, padding_side='right', padding=True)
+    tokenizer = LlamaTokenizer.from_pretrained(MODEL_NAME)
     model = LlamaForCausalLM.from_pretrained(
         MODEL_NAME,
         torch_dtype=torch.float16,
         device_map="auto"  # Automatically map the model to available GPUs/CPU
     )
-    if '<pad>' not in tokenizer.get_vocab():
-        # Add the pad token
-        tokenizer.add_special_tokens({"pad_token": "<pad>"})
-
-    # Resize the embeddings
-    model.resize_token_embeddings(len(tokenizer))
-
-    # Set embeddings of pad token to zero
-    model.model.embed_tokens.weight.data[-1] = torch.zeros_like(model.model.embed_tokens.weight[-1])
-
-    # Configure the pad token in the model
-    model.config.pad_token_id = tokenizer.pad_token_id
-    model.generation_config.pad_token_id = tokenizer.pad_token_id
-    # Check if they are equal
-    assert model.config.pad_token_id == tokenizer.pad_token_id, "The model's pad token ID does not match the tokenizer's pad token ID!"
 
     # Quantize model
     if config_name != 'float':
@@ -71,12 +61,16 @@ except Exception as e:
     print(f"Error loading model: {e}")
     raise RuntimeError("Failed to load the model and tokenizer.")
 
-# Store chat histories in memory (for simplicity)
-chat_sessions = {}
+
+messages = []
+past_key_values = DynamicCache()
+max_cache_length = past_key_values.get_max_length()
+
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Llama-2-7b-hf Chat API"}
+
 
 @app.post("/chat")
 def chat(request: ChatRequest):
@@ -84,48 +78,23 @@ def chat(request: ChatRequest):
     Generate a chat response based on the user's message and session history.
     """
     try:
-        # Retrieve or initialize chat history
-        session_id = request.session_id
-        if session_id not in chat_sessions:
-            chat_sessions[session_id] = []
+        messages.append({"role": "user", "content": request.user_message})
+        inputs = tokenizer.apply_chat_template(messages,
+                                               add_generation_prompt=True,
+                                               return_tensors="pt",
+                                               return_dict=True).to(model.device)
+        input_length = inputs["input_ids"].shape[1]
+        outputs = model.generate(**inputs, do_sample=True, max_new_tokens=256, past_key_values=past_key_values)
+        completion = tokenizer.decode(outputs[0, input_length:], skip_special_tokens=True)
+        messages.append({"role": "assistant", "content": completion})
+        return {"assistant_response": completion}
 
-        # Update chat history with the user message
-        chat_history = chat_sessions[session_id]
-        chat_history.append(f"User: {request.user_message}")
-
-        # Create the conversation input
-        conversation = "\n".join(chat_history) + "\nAssistant:"
-        inputs = tokenizer(conversation, return_tensors="pt", padding=True).to(model.device)
-
-        input_seq_len = inputs['input_ids'].shape[-1]
-        # Pad input_ids and attention_mask
-        inputs['input_ids'] = pad(inputs['input_ids'], (0, 1024 - input_seq_len), value=tokenizer.pad_token_id)
-        inputs['attention_mask'] = pad(inputs['attention_mask'], (0, 1024 - input_seq_len), value=0)
-
-        # Generate the model's response
-        outputs = model.generate(
-            **inputs,
-            max_length=request.max_length,
-            do_sample=True,
-            top_k=50,
-            top_p=0.95,
-            pad_token_id=tokenizer.eos_token_id,
-        )
-        generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-        # Extract the assistant's response from the generated text
-        assistant_response = generated_text[len(conversation):].strip()
-        chat_history.append(f"Assistant: {assistant_response}")
-
-        # Update the session history
-        chat_sessions[session_id] = chat_history
-
-        return {"assistant_response": assistant_response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during chat: {str(e)}")
 
 
+
 if __name__ == "__main__":
     import uvicorn
-    # uvicorn.run(app, host="192.168.75.114", port=8000)
-    uvicorn.run(app, host="192.168.75.63", port=8000)
+    uvicorn.run(app, host="192.168.75.114", port=8000)
+    # uvicorn.run(app, host="192.168.75.63", port=8000)
