@@ -23,7 +23,7 @@ if __name__ == '__main__':
     config_list = [
         # 'float',
         # 'configs/w8a8_per_tensor_per_token_dynamic.yaml',  # The dynamic configuration
-        # 'configs/w8a8_per_tensor_per_token_static.yaml',  # the static configuration
+        # 'configs/w8a8_static.yaml',  # the static configuration
         'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
     ]
 
