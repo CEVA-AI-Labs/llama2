@@ -12,7 +12,17 @@ from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
 from utils import get_calibration_loader
 from torch.nn.functional import pad
+import argparse
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
+def parse_args():
+    # Argument parser for IP address
+    parser = argparse.ArgumentParser(description="FastAPI backend for Llama-2 chat application")
+    parser.add_argument("--ip", type=str, required=True, help="IP address to run the FastAPI server on")
+    args = parser.parse_args()
+    return args
+
 
 # Define the input schema
 class ChatRequest(BaseModel):
@@ -131,5 +141,5 @@ def chat(request: ChatRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    # uvicorn.run(app, host="192.168.75.114", port=8000)
-    uvicorn.run(app, host="192.168.75.63", port=8000)
+    args = parse_args()
+    uvicorn.run(app, host=args.ip, port=8000)

@@ -12,7 +12,17 @@ from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
 from utils import get_calibration_loader
 from transformers.cache_utils import DynamicCache
+import argparse
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
+def parse_args():
+    # Argument parser for IP address
+    parser = argparse.ArgumentParser(description="FastAPI backend for Llama-2 chat application")
+    parser.add_argument("--ip", type=str, required=True, help="IP address to run the FastAPI server on")
+    args = parser.parse_args()
+    return args
+
 
 # Define the input schema
 class ChatRequest(BaseModel):
@@ -26,9 +36,9 @@ app = FastAPI()
 # Load the Llama-2-7b-hf model and tokenizer
 MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"
 # config_name = 'float'
-config_name = '../configs/w8a8_per_tensor_per_token_dynamic.yaml' # The dynamic quantization conf
+# config_name = '../configs/w8a8_per_tensor_per_token_dynamic.yaml' # The dynamic quantization conf
 # config_name = '../configs/w8a8_static.yaml'  # the static quantization conf
-# config_name = '../configs/w8a8_npm_v1_3_4.yaml' # The mixed dynamic and static conf
+config_name = '../configs/w8a8_npm_v1_3_4.yaml' # The mixed dynamic and static conf
 
 try:
     tokenizer = LlamaTokenizer.from_pretrained(MODEL_NAME)
@@ -96,5 +106,5 @@ def chat(request: ChatRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="192.168.75.114", port=8000)
-    # uvicorn.run(app, host="192.168.75.63", port=8000)
+    args = parse_args()
+    uvicorn.run(app, host=args.ip, port=8000)
