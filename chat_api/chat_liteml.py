@@ -1,3 +1,7 @@
+"""
+This script is used for chat with the command line terminal, compatible with transformers version 4.34.0.
+It applies right padding to 1024 tokens.
+"""
 from pydantic import BaseModel
 # from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers import LlamaTokenizer
@@ -19,7 +23,7 @@ class ChatRequest(BaseModel):
 # Load the Llama-2-7b-hf model and tokenizer
 MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"
 # config_name = 'float'
-config_name = 'configs/Eli/static_roni_w8a8ptok_sym_matmul_token_no_head_tensor.yaml' # The mixed dynamic and static conf
+config_name = '../configs/Eli/static_roni_w8a8ptok_sym_matmul_token_no_head_tensor.yaml' # The mixed dynamic and static conf
 
 try:
     tokenizer = LlamaTokenizer.from_pretrained(MODEL_NAME, padding_side='right', padding=True)

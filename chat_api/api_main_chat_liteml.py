@@ -26,9 +26,9 @@ app = FastAPI()
 # Load the Llama-2-7b-hf model and tokenizer
 MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"
 # config_name = 'float'
-# config_name = 'configs/w8a8_per_tensor_per_token_dynamic.yaml' # The dynamic quantization conf
-# config_name = 'configs/w8a8_static.yaml'  # the static quantization conf
-config_name = 'configs/w8a8_npm_v1_3_4.yaml' # The mixed dynamic and static conf
+config_name = '../configs/w8a8_per_tensor_per_token_dynamic.yaml' # The dynamic quantization conf
+# config_name = '../configs/w8a8_static.yaml'  # the static quantization conf
+# config_name = '../configs/w8a8_npm_v1_3_4.yaml' # The mixed dynamic and static conf
 
 try:
     tokenizer = LlamaTokenizer.from_pretrained(MODEL_NAME)
