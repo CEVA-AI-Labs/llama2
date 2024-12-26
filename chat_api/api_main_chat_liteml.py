@@ -30,15 +30,16 @@ class ChatRequest(BaseModel):
     session_id: str  # Unique identifier for the chat session
     max_length: int = 4096  # Optional parameter with default
 
+
 # Initialize the FastAPI app
 app = FastAPI()
 
 # Load the Llama-2-7b-hf model and tokenizer
 MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"
-# config_name = 'float'
+config_name = 'float'
 # config_name = '../configs/w8a8_per_tensor_per_token_dynamic.yaml' # The dynamic quantization conf
 # config_name = '../configs/w8a8_static.yaml'  # the static quantization conf
-config_name = '../configs/w8a8_npm_v1_3_4.yaml' # The mixed dynamic and static conf
+# config_name = '../configs/w8a8_npm_v1_3_4.yaml' # The mixed dynamic and static conf
 
 try:
     tokenizer = LlamaTokenizer.from_pretrained(MODEL_NAME)
@@ -82,6 +83,21 @@ def read_root():
     return {"message": "Welcome to the Llama-2-7b-hf Chat API"}
 
 
+@app.post("/reset")
+def reset_chat():
+    """
+    Resets the chat history and KV-cache.
+    """
+    global messages, past_key_values
+    try:
+        messages = []
+        past_key_values = DynamicCache()
+        return {"messages": messages, "token_count": 0, "past_key_values": past_key_values}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during chat reset: {str(e)}")
+
+
 @app.post("/chat")
 def chat(request: ChatRequest):
     """
@@ -94,14 +110,14 @@ def chat(request: ChatRequest):
                                                return_tensors="pt",
                                                return_dict=True).to(model.device)
         input_length = inputs["input_ids"].shape[1]
-        outputs = model.generate(**inputs, do_sample=True, max_new_tokens=256, past_key_values=past_key_values)
+        outputs = model.generate(**inputs, do_sample=True, max_length=request.max_length, past_key_values=past_key_values)
         completion = tokenizer.decode(outputs[0, input_length:], skip_special_tokens=True)
         messages.append({"role": "assistant", "content": completion})
-        return {"assistant_response": completion}
+        return {"assistant_response": completion,
+                "token_count": outputs.shape[1]}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during chat: {str(e)}")
-
 
 
 if __name__ == "__main__":
