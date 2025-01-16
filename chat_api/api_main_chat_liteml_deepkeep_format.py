@@ -13,8 +13,20 @@ from liteml.ailabs_shared.load_config import load_config
 from utils import get_calibration_loader
 from transformers.cache_utils import DynamicCache
 import argparse
-from typing import List
+from typing import List, Union
+import numpy as np
+import random
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+def set_seed(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU.
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 def parse_args():
@@ -27,9 +39,14 @@ def parse_args():
 
 # Define the input schema
 class ChatRequest(BaseModel):
-    role: str
-    content: str
+    model: str
+    messages: list
+    temperature: float
+    max_tokens: int
+    stop: Union[str, list]
 
+
+set_seed(42)
 
 # Initialize the FastAPI app
 app = FastAPI()
@@ -83,19 +100,20 @@ def read_root():
 
 
 @app.post("/chat")
-def chat(requests: List[ChatRequest]):
+def chat(request: ChatRequest):
     """
     Generate a chat response based on the user's message and session history.
     """
     try:
-        inputs = tokenizer.apply_chat_template(requests,
+        messages = request.messages
+        inputs = tokenizer.apply_chat_template(messages,
                                                add_generation_prompt=True,
                                                return_tensors="pt",
                                                return_dict=True).to(model.device)
         input_length = inputs["input_ids"].shape[1]
         outputs = model.generate(**inputs, do_sample=True, max_length=4096)
         completion = tokenizer.decode(outputs[0, input_length:], skip_special_tokens=True)
-        return {"role": "assistant", "content": completion}
+        return {"model": "llama2_liteml", "choices": [{"message": {"role": "assistant", "content": completion}}]}
 
 
     except Exception as e:
