@@ -13,9 +13,21 @@ from liteml.ailabs_shared.load_config import load_config
 import csv
 from utils import evaluate, get_calibration_loader
 
+
+def load_spinquant_weights(model, spinquant_model_path):
+    """
+    This function wraps Llama model with spinquant weights.
+    """
+    orig_state_dict = model.state_dict()
+    spinquant_state_dict = torch.load(spinquant_model_path)
+    spinquant_float_state_dict = {key: spinquant_state_dict[key] for key in orig_state_dict}
+    model.load_state_dict(spinquant_float_state_dict)
+
+
 if __name__ == '__main__':
     model_dir = 'meta-llama/Llama-2-7b-hf'
-    seq_len = 1024
+    seq_len = 2048
+    enable_spinquant = True
     print('Initializing tokenizer')
     tokenizer = LlamaTokenizer.from_pretrained(model_dir)
 
@@ -24,9 +36,11 @@ if __name__ == '__main__':
         # 'float',
         # 'configs/w8a8_per_tensor_per_token_dynamic.yaml',  # The dynamic configuration
         # 'configs/w8a8_static.yaml',  # the static configuration
-        'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
+        # 'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
+        'configs/spinquant/w4a8_spinquant_e.yaml',
     ]
 
+    spinquant_path = "/projects/vbu_projects/users/royj/gitRepos/SpinQuant/saved_models/spinquant_gptq_group128.pth"
 
     ppl_list = []
     for config_name in config_list:
@@ -34,6 +48,11 @@ if __name__ == '__main__':
         print('Loading model')
         model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float16)
         # model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float32)
+
+        # wrap model with spinquant
+        if enable_spinquant:
+            load_spinquant_weights(model, spinquant_path)
+
         with torch.no_grad():
             if config_name != 'float':
                 conf = load_config(config_name)
