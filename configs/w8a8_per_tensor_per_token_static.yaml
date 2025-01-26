@@ -19,7 +19,7 @@ QAT:
 
     custom_quantization:
       - source_module: torch.nn.Linear
-        destination_module: LinearQuant
+        destination_module: LinearTrueQuant
 
       - source_module: LiteMLMatmul
         destination_module: QuantMatmul

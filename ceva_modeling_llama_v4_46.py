@@ -49,7 +49,7 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 from transformers.models.llama.configuration_llama import LlamaConfig
-from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd, LiteMLMul, LlamaRMSNorm
+from liteml.ailabs_qat.layers.liteml_layers import LiteMLMatmul, LiteMLAdd, LiteMLMul, LlamaRMSNorm, LlamaTrueRMSNorm
 
 
 logger = logging.get_logger(__name__)
@@ -676,8 +676,11 @@ class LlamaDecoderLayer(nn.Module):
         self.self_attn = LLAMA_ATTENTION_CLASSES[config._attn_implementation](config=config, layer_idx=layer_idx)
 
         self.mlp = LlamaMLP(config)
-        self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        # self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        # self.post_attention_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.input_layernorm = LlamaTrueRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.post_attention_layernorm = LlamaTrueRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+
         self.add_1 = LiteMLAdd()
         self.add_2 = LiteMLAdd()
 
