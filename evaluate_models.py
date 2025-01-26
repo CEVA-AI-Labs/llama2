@@ -12,6 +12,7 @@ from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
 import csv
 from utils import evaluate, get_calibration_loader
+import re
 
 
 def load_spinquant_weights(model, spinquant_model_path):
@@ -22,6 +23,20 @@ def load_spinquant_weights(model, spinquant_model_path):
     spinquant_state_dict = torch.load(spinquant_model_path)
     spinquant_float_state_dict = {key: spinquant_state_dict[key] for key in orig_state_dict}
     model.load_state_dict(spinquant_float_state_dict)
+
+    # Add quantized weights, scales and maxq to linear layers as buffers
+    # 'model.layers.0.self_attn.q_proj.module.int_weight'
+    expr = re.compile(r"(?P<idx>\d+)\.(?P<layer>(\bself_attn\b)|(\bmlp\b))\.(?P<lin>\w+_proj)\.module\.(?P<buff>(\bint_weight\b)|(\bmaxq\b)|(\bscale\b))")
+    for key in spinquant_state_dict:
+        mm = expr.search(key)
+        if mm is None: continue
+
+        # print("Found: ", mm.groupdict())
+        decoder = model.model.layers[int(mm.group("idx"))]
+        layer = decoder.__getattr__(mm.group("layer"))
+        lin = layer.__getattr__(mm.group("lin"))
+        lin.register_buffer(mm.group("buff"), spinquant_state_dict[key])
+        print(f"Assigning model.layers.{mm.group('idx')}.{mm.group('layer')}.{mm.group('lin')}.{mm.group('buff')}")
 
 
 if __name__ == '__main__':
@@ -37,21 +52,27 @@ if __name__ == '__main__':
         # 'configs/w8a8_per_tensor_per_token_dynamic.yaml',  # The dynamic configuration
         # 'configs/w8a8_static.yaml',  # the static configuration
         # 'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
-        'configs/spinquant/w4a8_spinquant_e.yaml',
+        # 'configs/spinquant/w4a8_spinquant_e.yaml',
+        # 'configs/spinquant/w4a8_spinquant_e_linear.yaml',
+        'configs/spinquant/w4a8_spinquant_e_linear_static.yaml',  # Eli good
     ]
 
-    spinquant_path = "/projects/vbu_projects/users/royj/gitRepos/SpinQuant/saved_models/spinquant_gptq_group128.pth"
+    # spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_gptq_w_rtn.pth"
+    spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_qptq_grp-1_fp16.pth"
+    # spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_g128.pth"
 
     ppl_list = []
     for config_name in config_list:
         print(config_name)
         print('Loading model')
-        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float16)
+        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='cuda:0', torch_dtype=torch.float16)
         # model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float32)
 
         # wrap model with spinquant
         if enable_spinquant:
+            print("Loading spinquant model - please hold")
             load_spinquant_weights(model, spinquant_path)
+            print("Loading spinquant model - DONE")
 
         with torch.no_grad():
             if config_name != 'float':

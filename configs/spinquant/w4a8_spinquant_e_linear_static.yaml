@@ -1,0 +1,63 @@
+QAT:
+    fully_quantized: False
+    device: 'cuda'
+    data_quantization:
+      status: On
+      bits: 8
+      custom_bits: {'lm_head': 16}
+      symmetric: On
+      per_channel: True
+      quantization_mode: static
+      observer: MovingAverage
+    weights_quantization:
+      status: Off
+      bits: 4
+      custom_bits: {'lm_head': 16}
+      symmetric: On
+      per_channel: True
+      quant_and_freeze: False
+
+    custom_quantization:
+      - source_module: torch.nn.Linear
+        destination_module: LinearTrueQuant
+        params:
+          weights_quantizer:
+            weight_per_channel: True
+            offline_quant_weights: True
+          act_quantizer:
+            act_dynamic: True
+            observer: MinMax
+
+      - source_module: LiteMLMatmul
+        source_name: matmul_qkt
+        destination_module: QuantMatmul
+        params:
+          quantizer_in1: # per token
+            act_bits: 8
+            act_symmetric: On
+            dims: [ 0, -1 ]
+            act_dynamic: True
+            observer: MinMax
+          quantizer_in2: # per tensor
+            act_bits: 8
+            act_symmetric: On
+            dims: [ 0, -1, -2]
+            act_dynamic: False
+            observer: MovingAverage
+
+      - source_module: LiteMLMatmul
+        source_name: matmul_pv
+        destination_module: QuantMatmul
+        params:
+          quantizer_in1: # per token
+            act_bits: 16
+            act_symmetric: On
+            dims: [ 0, -1 ]
+            act_dynamic: True
+            observer: MinMax
+          quantizer_in2: # per tensor
+            act_bits: 8
+            act_symmetric: On
+            dims: [ 0, -1, -2]
+            act_dynamic: False
+            observer: MovingAverage

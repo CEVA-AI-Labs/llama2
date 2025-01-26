@@ -261,8 +261,17 @@ class LlamaMLP(nn.Module):
             down_proj = sum(down_proj)
         else:
             # down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
-            down_proj = self.down_proj(self.mul(self.act_fn(self.gate_proj(x)), self.up_proj(x)))
+            # down_proj = self.down_proj(self.mul(self.act_fn(self.gate_proj(x)), self.up_proj(x)))
+            # print("gate_proj", end=" ")
+            gate_proj = self.gate_proj(x)
+            act_fn = self.act_fn(gate_proj)
 
+            # print("up_proj", end=" ")
+            up_proj = self.up_proj(x)
+
+            # print("down_proj", end=" ")
+            mult = act_fn * up_proj
+            down_proj = self.down_proj(mult)
 
         return down_proj
 
@@ -352,8 +361,13 @@ class LlamaAttention(nn.Module):
             value_states = torch.cat(value_states, dim=-1)
 
         else:
+            # print("q_proj", end=" ")
             query_states = self.q_proj(hidden_states)
+
+            # print("k_proj", end=" ")
             key_states = self.k_proj(hidden_states)
+
+            # print("v_proj", end=" ")
             value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
@@ -385,6 +399,7 @@ class LlamaAttention(nn.Module):
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
             key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
 
+
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
         # attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
@@ -411,7 +426,6 @@ class LlamaAttention(nn.Module):
             )
 
         attn_output = attn_output.transpose(1, 2).contiguous()
-
         attn_output = attn_output.reshape(bsz, q_len, -1)
 
         if self.config.pretraining_tp > 1:
@@ -419,6 +433,7 @@ class LlamaAttention(nn.Module):
             o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.config.pretraining_tp, dim=1)
             attn_output = sum([F.linear(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp)])
         else:
+            # print("o_proj", end=" ")
             attn_output = self.o_proj(attn_output)
 
         if not output_attentions:
@@ -922,7 +937,7 @@ class LlamaModel(LlamaPreTrainedModel):
             use_cache = False
 
         if inputs_embeds is None:
-            inputs_embeds = self.embed_tokens(input_ids)
+            inputs_embeds = self.embed_tokens(input_ids.to(device=self.device))
 
         # kept for BC (non `Cache` `past_key_values` inputs)
         return_legacy_cache = False
@@ -959,7 +974,11 @@ class LlamaModel(LlamaPreTrainedModel):
         all_self_attns = () if output_attentions else None
         next_decoder_cache = None
 
+        layer_idx = 0
         for decoder_layer in self.layers:
+            # print(f"======== Layer {layer_idx} ===========")
+            layer_idx += 1
+
             if output_hidden_states:
                 all_hidden_states += (hidden_states,)
 
