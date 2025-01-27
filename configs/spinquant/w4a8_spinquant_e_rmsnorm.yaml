@@ -58,3 +58,6 @@ QAT:
             dims: [ 0, -1, -2]
             act_dynamic: False
             observer: MovingAverage
+
+      - source_module: LlamaRMSNorm
+        destination_module: compFlowRMSnorm

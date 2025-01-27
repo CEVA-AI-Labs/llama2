@@ -37,16 +37,25 @@ if __name__ == '__main__':
         # 'configs/w8a8_per_tensor_per_token_dynamic.yaml',  # The dynamic configuration
         # 'configs/w8a8_static.yaml',  # the static configuration
         # 'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
-        'configs/spinquant/w4a8_spinquant_e.yaml',
+        #'configs/spinquant/w4a8_spinquant_e.yaml',
+        'configs/spinquant/w4a8_spinquant_e_softmax.yaml',
+        #'configs/spinquant/w4a8_spinquant_e_matmul.yaml',
+        #'configs/spinquant/w4a8_spinquant_e_Silu.yaml',
+        #'configs/spinquant/w4a8_spinquant_e_all.yaml',
+        #'configs/spinquant/w4a8_spinquant_e_rmsnorm.yaml',
+        #'configs/spinquant/w4a8_spinquant_e_no_rmsnorm.yaml',
+        #'configs/Rana/fack_quant_RMSnorm.yaml',
+
     ]
 
-    spinquant_path = "/projects/vbu_projects/users/royj/gitRepos/SpinQuant/saved_models/spinquant_gptq_group128.pth"
+    #spinquant_path = "/projects/systems/systems/Ranam/SpinQuant/saved_models/spinquant_gptq_group128.pth"
+    spinquant_path = "spinquant_gptq_group128.pth"
 
     ppl_list = []
     for config_name in config_list:
         print(config_name)
         print('Loading model')
-        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float16)
+        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='cuda:0', torch_dtype=torch.float16, attn_implementation="eager")
         # model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float32)
 
         # wrap model with spinquant
@@ -69,8 +78,26 @@ if __name__ == '__main__':
                     ] = lambda model, x: model(x.cuda())
                 model = RetrainerModel(model, config=RetrainerConfig(conf))
 
-            # model._model._model.lm_head.set_weights_quant(False)
-            # model._model._model.lm_head.set_data_quant(False)
+
+            #if "fack_quant_RMSnorm" in config_name:
+            if "w4a8_spinquant_e_rmsnorm" in config_name or "w4a8_spinquant_e_all" in config_name:
+                layers = model._model._model.model.layers
+                for layer in layers:
+                    ### if the min input in the layer is smaller than value x (0.03125 give best results), choose alpha, otherwise alpha=1
+                    layernorm = layer.input_layernorm
+                    min_layernorm = layer.input_layernorm._quantizer_mean.obs.min_val
+                    if min_layernorm < 0.03125:
+                        alpha_layernorm = 0.03125 / min_layernorm
+                        layer.input_layernorm._alpha = alpha_layernorm
+
+                    post_attn = layer.post_attention_layernorm
+                    min_post_attn = layer.post_attention_layernorm._quantizer_mean.obs.min_val
+                    if min_post_attn < 0.03125:
+                        alpha_post_attn = 0.03125 / min_post_attn
+                        layer.post_attention_layernorm._alpha = alpha_post_attn
+
+            ## model._model._model.lm_head.set_weights_quant(False)
+            ## model._model._model.lm_head.set_data_quant(False)
             ppl = evaluate(model, tokenizer, seq_len=seq_len)
             print(f'Model {config_name}')
             print(f'Perplexity: {ppl:.4}')

@@ -1,0 +1,34 @@
+QAT:
+    fully_quantized: False
+    device: 'cuda'
+    data_quantization:
+      status: On
+      bits: 8
+      custom_bits: {'lm_head': 16}
+      symmetric: On
+      per_channel: True
+      quantization_mode: static
+      observer: 'MovingAverage'
+    weights_quantization:
+      status: Off
+      bits: 4
+      custom_bits: {'lm_head': 16}
+      symmetric: On
+      per_channel: True
+      quant_and_freeze: False
+
+    custom_quantization:
+      - source_module: torch.nn.Linear
+        destination_module: LinearQuant
+        params:
+          act_quantizer:
+            act_dynamic: True
+            observer: MinMax
+
+      - source_module: LiteMLMatmul
+        source_name: matmul_qkt
+        destination_module: compFlowMatMulqkt
+
+      - source_module: LiteMLMatmul
+        source_name: matmul_pv
+        destination_module: compFlowMatMul
