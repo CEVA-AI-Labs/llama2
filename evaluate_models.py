@@ -23,6 +23,7 @@ def load_spinquant_weights(model, spinquant_model_path):
     spinquant_state_dict = torch.load(spinquant_model_path)
     spinquant_float_state_dict = {key: spinquant_state_dict[key] for key in orig_state_dict}
     model.load_state_dict(spinquant_float_state_dict)
+    return
 
     # Add quantized weights, scales and maxq to linear layers as buffers
     # 'model.layers.0.self_attn.q_proj.module.int_weight'
@@ -60,7 +61,8 @@ if __name__ == '__main__':
     # spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_gptq_w_rtn.pth"
     # spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_qptq_grp-1_fp16.pth"
     # spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_g128.pth"
-    spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_g-1.pth"
+    # spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_g-1.pth"
+    spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_g-1_fp16.pth"
 
     ppl_list = []
     for config_name in config_list:
