@@ -2,6 +2,13 @@ import streamlit as st
 import requests
 import os
 
+MODELS_LIST = [
+    'float',
+    'w8a8_per_tensor_per_token_dynamic',
+    'w8a8_static',
+    'w8a8_npm_v1_3_4',
+]
+
 
 def main():
     # Get IP address from environment variable
@@ -13,6 +20,7 @@ def main():
     # FastAPI backend URL
     FASTAPI_URL = f"http://{ip_address}:8000/chat"
     RESET_ROUTE = f"http://{ip_address}:8000/reset"
+    SELECT_MODEL_ROUTE = f"http://{ip_address}:8000/select_model"
 
     # Streamlit app setup
     st.set_page_config(page_title="Chat with Llama-2", layout="centered")
@@ -27,6 +35,11 @@ def main():
         st.session_state.token_count = 0
 
     reset_button = st.sidebar.button("Reset", type="primary")
+    selected_model = st.sidebar.selectbox(
+        "Select model",
+        MODELS_LIST,
+    )
+    load_model = st.sidebar.button("Load", type="primary")
 
     # Chat input form
     prompt = st.chat_input("Say something")
@@ -52,6 +65,22 @@ def main():
             messages = data.get("messages", None)
             st.session_state.token_count = data.get("token_count")
             st.session_state.chat_history = []
+        else:
+            st.error("Failed to connect to the API.")
+
+    if load_model:
+        response = requests.post(RESET_ROUTE)
+        if response.status_code == 200:
+            data = response.json()
+            messages = data.get("messages", None)
+            st.session_state.token_count = data.get("token_count")
+            st.session_state.chat_history = []
+        else:
+            st.error("Failed to connect to the API.")
+        payload = {"model_id": selected_model}
+        response = requests.post(SELECT_MODEL_ROUTE, json=payload)
+        if response.status_code == 200:
+            st.success("Model selected successfully!")
         else:
             st.error("Failed to connect to the API.")
 

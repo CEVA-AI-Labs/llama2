@@ -24,25 +24,7 @@ def parse_args():
     return args
 
 
-# Define the input schema
-class ChatRequest(BaseModel):
-    user_message: str
-    session_id: str  # Unique identifier for the chat session
-    max_length: int = 4096  # Optional parameter with default
-
-
-# Initialize the FastAPI app
-app = FastAPI()
-
-# Load the Llama-2-7b-hf model and tokenizer
-MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"
-config_name = 'float'
-# config_name = '../configs/w8a8_per_tensor_per_token_dynamic.yaml' # The dynamic quantization conf
-# config_name = '../configs/w8a8_static.yaml'  # the static quantization conf
-# config_name = '../configs/w8a8_npm_v1_3_4.yaml' # The mixed dynamic and static conf
-
-try:
-    tokenizer = LlamaTokenizer.from_pretrained(MODEL_NAME)
+def load_model(config_name):
     model = LlamaForCausalLM.from_pretrained(
         MODEL_NAME,
         torch_dtype=torch.float16,
@@ -68,6 +50,48 @@ try:
         if 'OmniQuant' in conf["QAT"]:
             model = model.to(device)
 
+    return model
+
+
+# Define the input schema
+class ChatRequest(BaseModel):
+    user_message: str
+    session_id: str  # Unique identifier for the chat session
+    max_length: int = 4096  # Optional parameter with default
+
+
+class ModelSelection(BaseModel):
+    model_id: str
+
+
+# Initialize the FastAPI app
+app = FastAPI()
+
+# Load the Llama-2-7b-hf model and tokenizer
+MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"
+configs = ['float',
+           '../configs/w8a8_per_tensor_per_token_dynamic.yaml',
+           '../configs/w8a8_static.yaml',
+           '../configs/w8a8_npm_v1_3_4.yaml',]
+
+configs_dict = {
+        'float': 'float',
+        'w8a8_per_tensor_per_token_dynamic': '../configs/w8a8_per_tensor_per_token_dynamic.yaml',
+        'w8a8_static':  '../configs/w8a8_static.yaml',
+        'w8a8_npm_v1_3_4': '../configs/w8a8_npm_v1_3_4.yaml'
+}
+
+config_name = 'float'
+# config_name = '../configs/w8a8_per_tensor_per_token_dynamic.yaml' # The dynamic quantization conf
+# config_name = '../configs/w8a8_static.yaml'  # the static quantization conf
+# config_name = '../configs/w8a8_npm_v1_3_4.yaml' # The mixed dynamic and static conf
+
+
+try:
+    tokenizer = LlamaTokenizer.from_pretrained(MODEL_NAME)
+    model = load_model(config_name)
+
+
 except Exception as e:
     print(f"Error loading model: {e}")
     raise RuntimeError("Failed to load the model and tokenizer.")
@@ -81,6 +105,18 @@ max_cache_length = past_key_values.get_max_length()
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Llama-2-7b-hf Chat API"}
+
+
+@app.post("/select_model")
+def select_model(selection: ModelSelection):
+    global model
+    try:
+        # config_name = configs[selection.model_id]
+        config_name = configs_dict.get(selection.model_id)
+        print(f'Loading model: {config_name}')
+        model = load_model(config_name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during chat reset: {str(e)}")
 
 
 @app.post("/reset")
