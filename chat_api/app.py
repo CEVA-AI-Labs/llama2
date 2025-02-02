@@ -2,12 +2,15 @@ import streamlit as st
 import requests
 import os
 
-MODELS_LIST = [
-    'float',
-    'w8a8_per_tensor_per_token_dynamic',
-    'w8a8_static',
-    'w8a8_npm_v1_3_4',
-]
+
+@st.cache_data
+def fetch_available_models(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        st.error(f"Error fetching available models: {response.status_code}")
+        return None
 
 
 def main():
@@ -21,6 +24,7 @@ def main():
     FASTAPI_URL = f"http://{ip_address}:8000/chat"
     RESET_ROUTE = f"http://{ip_address}:8000/reset"
     SELECT_MODEL_ROUTE = f"http://{ip_address}:8000/select_model"
+    AVAILABLE_MODELS_ROUTE = f"http://{ip_address}:8000/available_models"
 
     # Streamlit app setup
     st.set_page_config(page_title="Chat with Llama-2", layout="centered")
@@ -34,10 +38,12 @@ def main():
     if "token_count" not in st.session_state:
         st.session_state.token_count = 0
 
+    available_models = fetch_available_models(AVAILABLE_MODELS_ROUTE)
+
     reset_button = st.sidebar.button("Reset", type="primary")
     selected_model = st.sidebar.selectbox(
         "Select model",
-        MODELS_LIST,
+        available_models.keys(),
     )
     load_model = st.sidebar.button("Load", type="primary")
 

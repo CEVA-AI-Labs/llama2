@@ -69,16 +69,12 @@ app = FastAPI()
 
 # Load the Llama-2-7b-hf model and tokenizer
 MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"
-configs = ['float',
-           '../configs/w8a8_per_tensor_per_token_dynamic.yaml',
-           '../configs/w8a8_static.yaml',
-           '../configs/w8a8_npm_v1_3_4.yaml',]
 
 configs_dict = {
         'float': 'float',
         'w8a8_per_tensor_per_token_dynamic': '../configs/w8a8_per_tensor_per_token_dynamic.yaml',
         'w8a8_static':  '../configs/w8a8_static.yaml',
-        'w8a8_npm_v1_3_4': '../configs/w8a8_npm_v1_3_4.yaml'
+        'w8a8_npm_v1_3_4': '../configs/w8a8_npm_v1_3_4.yaml',
 }
 
 config_name = 'float'
@@ -107,11 +103,15 @@ def read_root():
     return {"message": "Welcome to the Llama-2-7b-hf Chat API"}
 
 
+@app.get("/available_models")
+def get_initial_data():
+    return configs_dict
+
+
 @app.post("/select_model")
 def select_model(selection: ModelSelection):
     global model
     try:
-        # config_name = configs[selection.model_id]
         config_name = configs_dict.get(selection.model_id)
         print(f'Loading model: {config_name}')
         model = load_model(config_name)
