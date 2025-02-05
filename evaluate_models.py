@@ -1,86 +1,61 @@
-"""
-This module is used to evaluate the perplexity of the quantized Llama-2-7b model with different
-quantization configurations.
-"""
+import argparse
 import torch
-# from transformers import LlamaForCausalLM, LlamaTokenizer, OPTForCausalLM, AutoTokenizer
-# from transformers.models.llama.modeling_llama import LlamaDecoderLayer
-# from ceva_modeling_llama import LlamaForCausalLM, LlamaDecoderLayer, LlamaRMSNorm  # v4_34
-from ceva_modeling_llama_v4_46 import LlamaForCausalLM, LlamaDecoderLayer, LlamaRMSNorm  # v4_46
 from transformers import LlamaTokenizer
+from ceva_modeling_llama_v4_46 import LlamaForCausalLM, LlamaDecoderLayer
 from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
-import csv
 from utils import evaluate, get_calibration_loader
 
 
-def load_spinquant_weights(model, spinquant_model_path):
-    """
-    This function wraps Llama model with spinquant weights.
-    """
-    orig_state_dict = model.state_dict()
-    spinquant_state_dict = torch.load(spinquant_model_path)
-    spinquant_float_state_dict = {key: spinquant_state_dict[key] for key in orig_state_dict}
-    model.load_state_dict(spinquant_float_state_dict)
+def load_liteml_spinquant_scales(model, liteml_spinquant_path):
+    spinquant_state_dict = torch.load(liteml_spinquant_path)
+    model.load_state_dict(spinquant_state_dict, strict=False)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Evaluate the perplexity of the quantized Llama-2-7b model with different quantization configurations.")
+    parser.add_argument('--model_dir', type=str, default='meta-llama/Llama-2-7b-hf', help='Directory of the pretrained model')
+    parser.add_argument('--seq_len', type=int, default=2048, help='Sequence length for evaluation')
+    parser.add_argument('--config_file', type=str, default='float', help='path to LiteML configuration file')
+    parser.add_argument('--load_spinquant_path', type=str, help='Path to load the spinquant state_dict file suitable for LiteML')
+    parser.add_argument('--save_model_path', type=str, help='Path to save the retrained LiteML model')
+    parser.add_argument('--load_model_path', type=str, help='Path to load the retrained LiteML model')
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
-    model_dir = 'meta-llama/Llama-2-7b-hf'
-    seq_len = 2048
-    enable_spinquant = True
+    args = parse_args()
+    if args.load_model_path and args.load_spinquant_path:
+        raise ValueError("Both load_model_path and load_spinquant_path cannot be provided at the same time.")
     print('Initializing tokenizer')
-    tokenizer = LlamaTokenizer.from_pretrained(model_dir)
+    tokenizer = LlamaTokenizer.from_pretrained(args.model_dir)
+    print(f'Loading model: {args.config_file}')
+    model = LlamaForCausalLM.from_pretrained(args.model_dir, device_map='auto', torch_dtype=torch.float16)
 
-    # config_list contains the model that you want to compare. You can remove or add configurations to this list.
-    config_list = [
-        # 'float',
-        # 'configs/w8a8_per_tensor_per_token_dynamic.yaml',  # The dynamic configuration
-        # 'configs/w8a8_static.yaml',  # the static configuration
-        # 'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
-        'configs/spinquant/w4a8_spinquant_e.yaml',
-    ]
-
-    spinquant_path = "/projects/vbu_projects/users/royj/gitRepos/SpinQuant/saved_models/spinquant_gptq_group128.pth"
-
-    ppl_list = []
-    for config_name in config_list:
-        print(config_name)
-        print('Loading model')
-        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float16)
-        # model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float32)
-
-        # wrap model with spinquant
-        if enable_spinquant:
-            load_spinquant_weights(model, spinquant_path)
-
-        with torch.no_grad():
-            if config_name != 'float':
-                conf = load_config(config_name)
-                if 'SmoothQuant' in conf:
-                    conf["SmoothQuant"]["decoder_class"] = LlamaDecoderLayer
-                if conf['QAT']['data_quantization']['quantization_mode'] == 'static':
-                    # Add calibration loader
-                    calib_loader = get_calibration_loader(tokenizer, seq_len=seq_len)
-                    conf["QAT"]["data_quantization"][
-                        "calibration_loader"
-                    ] = calib_loader
-                    conf["QAT"]["data_quantization"][
-                        "calibration_loader_key"
-                    ] = lambda model, x: model(x.cuda())
+    with torch.no_grad():
+        if args.config_file != 'float':
+            conf = load_config(args.config_file)
+            if 'SmoothQuant' in conf:
+                conf["SmoothQuant"]["decoder_class"] = LlamaDecoderLayer
+            if conf['QAT']['data_quantization']['quantization_mode'] == 'static':
+                calib_loader = get_calibration_loader(tokenizer, seq_len=args.seq_len)
+                conf["QAT"]["data_quantization"]["calibration_loader"] = calib_loader
+                conf["QAT"]["data_quantization"]["calibration_loader_key"] = lambda model, x: model(x.cuda())
+            if args.load_model_path:
+                model = RetrainerModel.from_pretrained(model,
+                                                       args.config_file,
+                                                       args.load_model_path,
+                                                       device=None,
+                                                       dummy_input=torch.randint(0, 32000, (1, args.seq_len)),
+                                                       strict=False,
+                                                       map_location=lambda storage, loc: storage)
+            else:
                 model = RetrainerModel(model, config=RetrainerConfig(conf))
+            if args.load_spinquant_path:
+                load_liteml_spinquant_scales(model, args.load_spinquant_path)
+            if args.save_model_path:
+                torch.save(model.state_dict(), args.save_model_path)
 
-            # model._model._model.lm_head.set_weights_quant(False)
-            # model._model._model.lm_head.set_data_quant(False)
-            ppl = evaluate(model, tokenizer, seq_len=seq_len)
-            print(f'Model {config_name}')
-            print(f'Perplexity: {ppl:.4}')
-            ppl_list.append({'name': config_name, 'perplexity': ppl.item()})
-
-            del model
-
-    # Save results in a csv file
-    fields = ['name', 'perplexity']
-    with open('ppl.csv', 'w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=fields)
-        writer.writeheader()
-        writer.writerows(ppl_list)
+        ppl = evaluate(model, tokenizer, seq_len=args.seq_len)
+        print(f'Model {args.config_file}')
+        print(f'Perplexity: {ppl:.4}')

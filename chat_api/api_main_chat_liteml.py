@@ -24,7 +24,11 @@ def parse_args():
     return args
 
 
-def load_model(config_name):
+def load_model(config_name, state_dict=None):
+    global model
+    if 'model' in globals():
+        model.to('cpu')
+        del model
     model = LlamaForCausalLM.from_pretrained(
         MODEL_NAME,
         torch_dtype=torch.float16,
@@ -46,9 +50,18 @@ def load_model(config_name):
                 "calibration_loader_key"
             ] = lambda model, x: model(x.cuda())
         with torch.no_grad():
-            model = RetrainerModel(model, config=RetrainerConfig(conf))
-        if 'OmniQuant' in conf["QAT"]:
-            model = model.to(device)
+            if state_dict is not None:
+                model = RetrainerModel.from_pretrained(model,
+                                                       config_name,
+                                                       state_dict,
+                                                       device=None,
+                                                       dummy_input=torch.randint(0, 32000, (1, 2048)),
+                                                       strict=False,
+                                                       map_location=lambda storage, loc: storage
+                                                       )
+                model.set_weights_quant(False)  # weights are already quantized, don't quantize again since its slow.
+            else:
+                model = RetrainerModel(model, config=RetrainerConfig(conf))
 
     return model
 
@@ -71,17 +84,16 @@ app = FastAPI()
 MODEL_NAME = "meta-llama/Llama-2-7b-chat-hf"
 
 configs_dict = {
-        'float': 'float',
-        'w8a8_per_tensor_per_token_dynamic': '../configs/w8a8_per_tensor_per_token_dynamic.yaml',
-        'w8a8_static':  '../configs/w8a8_static.yaml',
-        'w8a8_npm_v1_3_4': '../configs/w8a8_npm_v1_3_4.yaml',
+        'float': {'config': 'float'},
+        'w8a8_per_tensor_per_token_dynamic': {'config': '../configs/w8a8_per_tensor_per_token_dynamic.yaml'},
+        'w8a8_static':  {'config': '../configs/w8a8_static.yaml'},
+        'w8a8_npm_v1_3_4': {'config': '../configs/w8a8_npm_v1_3_4.yaml'},
+        'w4a8_g128': {'config': '../configs/w4a8_liteml_g128.yaml'},
+        'w4a8_liteml_spinquant_e': {'config': '../configs/spinquant/w4a8_liteml_spinquant_e.yaml',
+                                    'state_dict': "/projects/vbu_projects/users/royj/gitRepos/SpinQuant/saved_models/retrained_liteml_spinquant_gptq_group128_chat.pth"}
 }
 
 config_name = 'float'
-# config_name = '../configs/w8a8_per_tensor_per_token_dynamic.yaml' # The dynamic quantization conf
-# config_name = '../configs/w8a8_static.yaml'  # the static quantization conf
-# config_name = '../configs/w8a8_npm_v1_3_4.yaml' # The mixed dynamic and static conf
-
 
 try:
     tokenizer = LlamaTokenizer.from_pretrained(MODEL_NAME)
@@ -112,9 +124,12 @@ def get_initial_data():
 def select_model(selection: ModelSelection):
     global model
     try:
-        config_name = configs_dict.get(selection.model_id)
-        print(f'Loading model: {config_name}')
-        model = load_model(config_name)
+        # config_name = configs_dict.get(selection.model_id)
+        config_dict = configs_dict.get(selection.model_id)
+        config_yaml = config_dict.get('config')
+        config_state_dict = config_dict.get('state_dict')
+        print(f'Loading model: {config_yaml}')
+        model = load_model(config_yaml, config_state_dict)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during chat reset: {str(e)}")
 
@@ -147,6 +162,7 @@ def chat(request: ChatRequest):
                                                return_dict=True).to(model.device)
         input_length = inputs["input_ids"].shape[1]
         outputs = model.generate(**inputs, do_sample=True, max_length=request.max_length, past_key_values=past_key_values)
+        # outputs = model.generate(**inputs, do_sample=True, max_length=50, past_key_values=past_key_values)
         completion = tokenizer.decode(outputs[0, input_length:], skip_special_tokens=True)
         messages.append({"role": "assistant", "content": completion})
         return {"assistant_response": completion,
