@@ -62,6 +62,7 @@ def load_model(config_name, state_dict=None):
                 model.set_weights_quant(False)  # weights are already quantized, don't quantize again since its slow.
             else:
                 model = RetrainerModel(model, config=RetrainerConfig(conf))
+            model.eval()
 
     return model
 
@@ -155,18 +156,19 @@ def chat(request: ChatRequest):
     Generate a chat response based on the user's message and session history.
     """
     try:
-        messages.append({"role": "user", "content": request.user_message})
-        inputs = tokenizer.apply_chat_template(messages,
-                                               add_generation_prompt=True,
-                                               return_tensors="pt",
-                                               return_dict=True).to(model.device)
-        input_length = inputs["input_ids"].shape[1]
-        outputs = model.generate(**inputs, do_sample=True, max_length=request.max_length, past_key_values=past_key_values)
-        # outputs = model.generate(**inputs, do_sample=True, max_length=50, past_key_values=past_key_values)
-        completion = tokenizer.decode(outputs[0, input_length:], skip_special_tokens=True)
-        messages.append({"role": "assistant", "content": completion})
-        return {"assistant_response": completion,
-                "token_count": outputs.shape[1]}
+        with torch.no_grad():
+            messages.append({"role": "user", "content": request.user_message})
+            inputs = tokenizer.apply_chat_template(messages,
+                                                   add_generation_prompt=True,
+                                                   return_tensors="pt",
+                                                   return_dict=True).to(model.device)
+            input_length = inputs["input_ids"].shape[1]
+            outputs = model.generate(**inputs, do_sample=True, max_length=request.max_length, past_key_values=past_key_values)
+            # outputs = model.generate(**inputs, do_sample=True, max_length=50, past_key_values=past_key_values)
+            completion = tokenizer.decode(outputs[0, input_length:], skip_special_tokens=True)
+            messages.append({"role": "assistant", "content": completion})
+            return {"assistant_response": completion,
+                    "token_count": outputs.shape[1]}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during chat: {str(e)}")
