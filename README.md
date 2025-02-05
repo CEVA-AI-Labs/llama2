@@ -36,25 +36,25 @@ Below are some examples:
 
 #### Basic PTQ run:
 ```bash
-python evaluate_models.py --model_dir meta-llama/Llama-2-7b-hf --config_file configs/w8a8_npm_v1_3_4.yaml
+python evaluate_models.py --config_file configs/w8a8_npm_v1_3_4.yaml
 ```
 
 #### PTQ run with LiteML:
 ```bash
-python evaluate_models.py --model_dir meta-llama/Llama-2-7b-hf --config_file configs/w8a8_npm_v1_3_4.yaml
+python evaluate_models.py --config_file configs/w8a8_npm_v1_3_4.yaml
 ```
 
 #### Load weights and scale factors from SpinQuant's state dict and perform PTQ with LiteML:
 ```bash
---model_dir meta-llama/Llama-2-7b-hf --config_file configs/spinquant/w4a8_liteml_spinquant_e.yaml --load_spinquant_path /path/to/spinquant.pth
+python evaluate_models.py --config_file configs/spinquant/w4a8_liteml_spinquant_e.yaml --load_spinquant_path /path/to/spinquant.pth
 ```
 
 #### Load weights and scale factors from SpinQuant's state dict, perform PTQ using LiteML and save the model's state dict after calibration:
 ```bash
---model_dir meta-llama/Llama-2-7b-hf --config_file configs/spinquant/w4a8_liteml_spinquant_e.yaml --load_spinquant_path /path/to/spinquant.pth --save_model_path /path/to/liteml_spinquant.pth
+python evaluate_models.py --config_file configs/spinquant/w4a8_liteml_spinquant_e.yaml --load_spinquant_path /path/to/spinquant.pth --save_model_path /path/to/liteml_spinquant.pth
 ```
 
 #### Load a pretrained LiteML model and perform PTQ:
 ```bash
---model_dir meta-llama/Llama-2-7b-hf --config_file configs/spinquant/w4a8_liteml_spinquant_e.yaml --load_model_path /path/to/liteml_spinquant.pth
+python evaluate_models.py --config_file configs/spinquant/w4a8_liteml_spinquant_e.yaml --load_model_path /path/to/liteml_spinquant.pth
 ```
