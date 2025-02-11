@@ -62,4 +62,4 @@ QAT:
             observer: MovingAverage
 
       - source_module: torch.nn.Softmax
-        destination_module: compFlowSoftmax
+        destination_module: PwlaSoftmax

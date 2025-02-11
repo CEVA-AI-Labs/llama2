@@ -61,4 +61,4 @@ QAT:
 
 
       - source_module: LlamaRMSNorm
-        destination_module: LlamaTrueRMSNorm
+        destination_module: TrueQuantRMSNorm

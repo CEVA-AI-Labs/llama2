@@ -27,8 +27,8 @@ QAT:
 
       - source_module: LiteMLMatmul
         source_name: matmul_qkt
-        destination_module: compFlowMatMulqkt
+        destination_module: TrueQuantMatmulqkt
 
       - source_module: LiteMLMatmul
         source_name: matmul_pv
-        destination_module: compFlowMatMul
+        destination_module: TrueQuantMatmulPV

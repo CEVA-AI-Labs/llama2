@@ -20,7 +20,7 @@ QAT:
     custom_quantization:
 
       - source_module: torch.nn.Linear
-        destination_module: LinearTrueQuant
+        destination_module: TrueQuantLinear
         params:
           weights_quantizer:
             weight_per_channel: True

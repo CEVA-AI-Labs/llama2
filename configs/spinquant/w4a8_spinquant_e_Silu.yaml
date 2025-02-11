@@ -60,4 +60,4 @@ QAT:
             observer: MovingAverage
 
       - source_module: torch.nn.SiLU
-        destination_module: compFlowSilU
+        destination_module: PwlaSilU
