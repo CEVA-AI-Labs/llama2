@@ -395,7 +395,9 @@ class LlamaAttention(nn.Module):
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             # attn_weights = attn_weights + causal_mask
-            attn_weights = self.add_mask(attn_weights, causal_mask)
+            # attn_weights = self.add_mask(attn_weights, causal_mask)
+            torch.where(causal_mask > torch.finfo(torch.float16).min, attn_weights,
+                        torch.tensor(torch.finfo(torch.float16).min, dtype=torch.float16), out=attn_weights)
 
 
         # upcast attention to fp32
