@@ -396,7 +396,10 @@ class LlamaAttention(nn.Module):
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             # attn_weights = attn_weights + causal_mask
             attn_weights = self.add_mask(attn_weights, causal_mask)
-
+            mm = torch.tensor(torch.finfo(torch.float16).min, device=causal_mask.device, dtype=causal_mask.dtype)
+            torch.where(causal_mask > mm, attn_weights, mm, out=attn_weights)
+            # torch.where(causal_mask > torch.finfo(torch.float16).min, attn_weights,
+            #         torch.tensor(torch.finfo(torch.float16).min, dtype=torch.float16), out=attn_weights)
 
         # upcast attention to fp32
         #attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
@@ -735,6 +738,9 @@ class LlamaDecoderLayer(nn.Module):
 
         if use_cache:
             outputs += (present_key_value,)
+
+        if torch.any(~torch.isfinite(outputs[0])):
+            print("XYXYXYXYX")
 
         return outputs
 

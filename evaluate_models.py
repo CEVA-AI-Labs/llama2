@@ -62,18 +62,19 @@ if __name__ == '__main__':
         # 'configs/w8a8_static.yaml',  # the static configuration
         # 'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
         #'configs/spinquant/w4a8_spinquant_e.yaml',
-        'configs/spinquant/w4a8_spinquant_e_softmax.yaml',
+        # 'configs/spinquant/w4a8_spinquant_e_softmax.yaml',
         #'configs/spinquant/w4a8_spinquant_e_matmul.yaml',
         #'configs/spinquant/w4a8_spinquant_e_Silu.yaml',
         #'configs/spinquant/w4a8_spinquant_e_rmsnorm.yaml',
-        #'configs/spinquant/w4a8_spinquant_e_linear.yaml',
+        '/systems_scratch/elit/ailabs/llama2/configs/spinquant/w4a8_spinquant_e_linear_only.yaml',
         #'configs/spinquant/w4a8_spinquant_e_all.yaml',
 
     ]
 
     #spinquant_path = "/projects/systems/systems/Ranam/SpinQuant/saved_models/spinquant_gptq_group128.pth"
-    spinquant_path = "spinquant_gptq_group128.pth"
-    #spinquant_path = "spinquant_gptq_spda.pth"
+    # spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_wg128_ag-1.pth"
+    spinquant_path = "/systems_scratch/elit/ailabs/saved_spinquant_models/spinquant_wg32_ag-1_eli.pth"
+    # spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_qptq_grp-1_fp16.pth"
     #spinquant_path = "/home/ranam/Documents/LiteML/Llama2/spinquant_gptq_spda.pth"
     #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_wrtn_group3.pth"
     #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group3.pth"
@@ -84,7 +85,7 @@ if __name__ == '__main__':
     for config_name in config_list:
         print(config_name)
         print('Loading model')
-        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float16, attn_implementation="eager")
+        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='cuda:7', torch_dtype=torch.float16, attn_implementation="eager")
         # model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float32)
 
         # wrap model with spinquant

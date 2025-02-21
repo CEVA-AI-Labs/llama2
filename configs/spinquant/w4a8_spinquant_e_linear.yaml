@@ -7,8 +7,8 @@ QAT:
       custom_bits: {'lm_head': 16}
       symmetric: On
       per_channel: True
-      quantization_mode: static
-      observer: 'MovingAverage'
+      quantization_mode: dynamic
+      observer: MinMax
     weights_quantization:
       status: Off
       bits: 4
