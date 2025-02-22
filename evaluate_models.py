@@ -85,7 +85,7 @@ if __name__ == '__main__':
     for config_name in config_list:
         print(config_name)
         print('Loading model')
-        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='cuda:7', torch_dtype=torch.float16, attn_implementation="eager")
+        model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float16, attn_implementation="eager")
         # model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float32)
 
         # wrap model with spinquant
