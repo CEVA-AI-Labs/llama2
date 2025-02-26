@@ -17,7 +17,6 @@ def parse_args():
     parser.add_argument('--model_dir', type=str, default='meta-llama/Llama-2-7b-hf', help='Directory of the pretrained model')
     parser.add_argument('--seq_len', type=int, default=2048, help='Sequence length for evaluation')
     parser.add_argument('--config_file', type=str, default='float', help='path to LiteML configuration file')
-    parser.add_argument('--load_spinquant_path', type=str, help='Path to load the spinquant state_dict file suitable for LiteML')
     parser.add_argument('--save_model_path', type=str, help='Path to save the retrained LiteML model')
     parser.add_argument('--load_model_path', type=str, help='Path to load the retrained LiteML model')
     return parser.parse_args()
@@ -51,8 +50,6 @@ if __name__ == '__main__':
                                                        map_location=lambda storage, loc: storage)
             else:
                 model = RetrainerModel(model, config=RetrainerConfig(conf))
-            if args.load_spinquant_path:
-                load_liteml_spinquant_scales(model, args.load_spinquant_path)
             if args.save_model_path:
                 torch.save(model.state_dict(), args.save_model_path)
 
