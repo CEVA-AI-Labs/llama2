@@ -9,10 +9,10 @@ from lm_eval import simple_evaluate
 from lm_eval.models.huggingface import HFLM
 import torch
 
-task_name = "hellaswag"
-model_id = "meta-llama/Llama-2-7b-chat-hf"
-config_file = "configs/w8a8_per_tensor_per_token_dynamic.yaml"
-# config_file = "float"
+task_name = "wikitext"  # hellaswag
+model_id = "meta-llama/Llama-2-7b-hf"
+# config_file = "configs/w8a8_per_tensor_per_token_dynamic.yaml"
+config_file = "float"
 seq_len = 2048
 model = LlamaForCausalLM.from_pretrained(model_id, device_map='auto', torch_dtype=torch.float16, attn_implementation="eager")
 tokenizer = LlamaTokenizer.from_pretrained(model_id)
@@ -33,4 +33,4 @@ hf_model = HFLM(model)
 
 results = simple_evaluate(hf_model, tasks=[task_name], batch_size=8)
 
-pprint(results)
+pprint(results['results'])
