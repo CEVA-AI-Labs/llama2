@@ -1,0 +1,58 @@
+QAT:
+    fully_quantized: False
+    device: 'cuda'
+    data_quantization:
+      status: On
+      bits: 8
+      custom_bits: {'lm_head': 16}
+      symmetric: On
+      per_channel: True
+      quantization_mode: static
+      observer: 'MovingAverage'
+    weights_quantization:
+      status: Off
+      bits: 4
+      custom_bits: {'lm_head': 16}
+      symmetric: On
+      per_channel: True
+      quant_and_freeze: False
+
+
+
+    custom_quantization:
+
+      - source_module: torch.nn.Linear
+        destination_module: TrueQuantLinear
+        params:
+          weights_quantizer:
+            weight_per_channel: True
+            offline_quant_weights: True
+          act_quantizer:
+            act_dynamic: True
+            observer: MinMax
+
+      - source_module: torch.nn.SiLU
+        destination_module: PwlaSilU
+
+      - source_module: LlamaRMSNorm
+        destination_module: TrueQuantRMSNorm
+
+      - source_module: LiteMLMatmul
+        destination_module: TrueQuantMatmul
+        params:
+          quantizer_in1: # per token per head
+            act_bits: 8
+            dims: [ -1 ]
+            act_dynamic: True
+            observer: MinMax
+          quantizer_in2: # per tensor per head
+            act_bits: 8
+            dims: [ -1, -2 ]
+            act_dynamic: False
+            observer: MovingAverage
+
+      - source_module: torch.nn.Softmax
+        destination_module: PwlaSoftmax
+
+
+
