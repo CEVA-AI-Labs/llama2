@@ -62,22 +62,25 @@ if __name__ == '__main__':
         # 'configs/w8a8_static.yaml',  # the static configuration
         # 'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
         #'configs/spinquant/w4a8_spinquant_e.yaml',
-        'configs/spinquant/w4a8_spinquant_e_softmax.yaml',
+        # 'configs/spinquant/w4a8_spinquant_e_softmax.yaml',
         #'configs/spinquant/w4a8_spinquant_e_matmul.yaml',
         #'configs/spinquant/w4a8_spinquant_e_Silu.yaml',
         #'configs/spinquant/w4a8_spinquant_e_rmsnorm.yaml',
         #'configs/spinquant/w4a8_spinquant_e_linear.yaml',
         #'configs/spinquant/w4a8_spinquant_e_all.yaml',
+        'configs/spinquant/w4a8_spinquant_e_all_liteml_matmul.yaml',
+
 
     ]
 
     #spinquant_path = "/projects/systems/systems/Ranam/SpinQuant/saved_models/spinquant_gptq_group128.pth"
-    spinquant_path = "spinquant_gptq_group128.pth"
+    # spinquant_path = "spinquant_gptq_group128.pth"
     #spinquant_path = "spinquant_gptq_spda.pth"
     #spinquant_path = "/home/ranam/Documents/LiteML/Llama2/spinquant_gptq_spda.pth"
     #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_wrtn_group3.pth"
     #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group3.pth"
     #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group4.pth"
+    spinquant_path = "/projects/vbu_projects/users/royj/spinquant_models/spinquant_w128_a128.pth"
 
 
     ppl_list = []
