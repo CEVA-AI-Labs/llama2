@@ -22,7 +22,6 @@ def load_spinquant_weights(model, spinquant_model_path):
     spinquant_state_dict = torch.load(spinquant_model_path)
     spinquant_float_state_dict = {key: spinquant_state_dict[key] for key in orig_state_dict}
     model.load_state_dict(spinquant_float_state_dict)
-    #return
 
    # Add quantized weights, scales and maxq to linear layers as buffers
     # 'model.layers.0.self_attn.q_proj.module.int_weight'
@@ -37,16 +36,7 @@ def load_spinquant_weights(model, spinquant_model_path):
         lin = layer.__getattr__(mm.group("lin"))
         lin.register_buffer(mm.group("buff"), spinquant_state_dict[key])
         print(f"Assigning model.layers.{mm.group('idx')}.{mm.group('layer')}.{mm.group('lin')}.{mm.group('buff')}")
-''' 
-def load_spinquant_weights(model, spinquant_model_path):
-    """
-    This function wraps Llama model with spinquant weights.
-    """
-    orig_state_dict = model.state_dict()
-    spinquant_state_dict = torch.load(spinquant_model_path)
-    spinquant_float_state_dict = {key: spinquant_state_dict[key] for key in orig_state_dict}
-    model.load_state_dict(spinquant_float_state_dict)
-'''
+
 
 if __name__ == '__main__':
     model_dir = 'meta-llama/Llama-2-7b-hf'
@@ -61,25 +51,10 @@ if __name__ == '__main__':
         # 'configs/w8a8_per_tensor_per_token_dynamic.yaml',  # The dynamic configuration
         # 'configs/w8a8_static.yaml',  # the static configuration
         # 'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
-        #'configs/spinquant/w4a8_spinquant_e.yaml',
-        # 'configs/spinquant/w4a8_spinquant_e_softmax.yaml',
-        #'configs/spinquant/w4a8_spinquant_e_matmul.yaml',
-        #'configs/spinquant/w4a8_spinquant_e_Silu.yaml',
-        #'configs/spinquant/w4a8_spinquant_e_rmsnorm.yaml',
-        #'configs/spinquant/w4a8_spinquant_e_linear.yaml',
-        #'configs/spinquant/w4a8_spinquant_e_all.yaml',
+        # 'configs/spinquant/w4a8_spinquant_e.yaml',
         'configs/spinquant/w4a8_spinquant_e_all_liteml_matmul.yaml',
-
-
     ]
 
-    #spinquant_path = "/projects/systems/systems/Ranam/SpinQuant/saved_models/spinquant_gptq_group128.pth"
-    # spinquant_path = "spinquant_gptq_group128.pth"
-    #spinquant_path = "spinquant_gptq_spda.pth"
-    #spinquant_path = "/home/ranam/Documents/LiteML/Llama2/spinquant_gptq_spda.pth"
-    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_wrtn_group3.pth"
-    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group3.pth"
-    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group4.pth"
     spinquant_path = "/projects/vbu_projects/users/royj/spinquant_models/spinquant_w128_a128.pth"
 
 

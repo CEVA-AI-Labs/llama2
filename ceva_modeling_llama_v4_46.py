@@ -397,7 +397,7 @@ class LlamaAttention(nn.Module):
             # attn_weights = attn_weights + causal_mask
             # attn_weights = self.add_mask(attn_weights, causal_mask)
             torch.where(causal_mask > torch.finfo(torch.float16).min, attn_weights,
-                        torch.tensor(torch.finfo(torch.float16).min, dtype=torch.float16), out=attn_weights)
+                        torch.tensor(torch.finfo(torch.float16).min, dtype=torch.float16, device=attn_weights.device), out=attn_weights)
 
 
         # upcast attention to fp32
