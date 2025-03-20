@@ -9,12 +9,13 @@ The script then performs evaluation over wikitext-2 datasets.
 
 ## Installation
 1. Extract the provided wheel file to this folder
-2. Create virtual environment with python=3.8 and activate it
+2. Copy spinquant's pth file to saved_models directory.
+3. Create virtual environment with python=3.8 and activate it
 ```bash
 python3.8 -m venv venv
 source venv/bin/activate
 ```
-3. Install wheel and requirements
+4. Install wheel and requirements
 ```bash
 pip install liteml-25.0.0-cp38-cp38-linux_x86_64.whl --extra-index-url https://download.pytorch.org/whl/cu117
 pip install --upgrade -r requirements.txt
