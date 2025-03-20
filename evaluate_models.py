@@ -48,11 +48,8 @@ if __name__ == '__main__':
     # config_list contains the model that you want to compare. You can remove or add configurations to this list.
     config_list = [
         # 'float',
-        # 'configs/w8a8_per_tensor_per_token_dynamic.yaml',  # The dynamic configuration
-        # 'configs/w8a8_static.yaml',  # the static configuration
-        # 'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
-        # 'configs/spinquant/w4a8_spinquant_e.yaml',
-        'configs/spinquant/w4a8_spinquant_e_PWLA_liteml_matmul.yaml',
+        'configs/spinquant/w4a8_spinquant_PWLA.yaml',
+        # 'configs/spinquant/w4a16_spinquant_PWLA.yaml',
     ]
 
     spinquant_path = "saved_models/spinquant_w128_a128.pth"
