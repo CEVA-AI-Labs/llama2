@@ -22,7 +22,14 @@ pip install --upgrade -r requirements.txt
 
 ## Usage
 
-#### Running evaluation with SpinQuant for W4A8 configuration:
+#### Running evaluation with SpinQuant:
 ```bash
 python evaluate_models.py
 ```
+
+#### Selecting quantization configuration:
+In the config_list in evaluate_models.py uncomment the desired configuration. The following configurations can be used:
+* 'float' - to run the float16 model (wihtout quantization) set enable_spinquant = False in the evaluate_models.py script.
+* 'configs/spinquant/w4a8_spinquant_PWLA.yaml'
+* 'configs/spinquant/w4a16_spinquant_PWLA.yaml'
+
