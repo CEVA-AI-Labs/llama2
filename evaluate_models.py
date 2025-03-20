@@ -52,10 +52,10 @@ if __name__ == '__main__':
         # 'configs/w8a8_static.yaml',  # the static configuration
         # 'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
         # 'configs/spinquant/w4a8_spinquant_e.yaml',
-        'configs/spinquant/w4a8_spinquant_e_all_liteml_matmul.yaml',
+        'configs/spinquant/w4a8_spinquant_e_PWLA_liteml_matmul.yaml',
     ]
 
-    spinquant_path = "/projects/vbu_projects/users/royj/spinquant_models/spinquant_w128_a128.pth"
+    spinquant_path = "saved_models/spinquant_w128_a128.pth"
 
 
     ppl_list = []
@@ -63,7 +63,6 @@ if __name__ == '__main__':
         print(config_name)
         print('Loading model')
         model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float16, attn_implementation="eager")
-        # model = LlamaForCausalLM.from_pretrained(model_dir, device_map='auto', torch_dtype=torch.float32)
 
         # wrap model with spinquant
         if enable_spinquant:
@@ -85,8 +84,6 @@ if __name__ == '__main__':
                     ] = lambda model, x: model(x.cuda())
                 model = RetrainerModel(model, config=RetrainerConfig(conf))
 
-            ## model._model._model.lm_head.set_weights_quant(False)
-            ## model._model._model.lm_head.set_data_quant(False)
             ppl = evaluate(model, tokenizer, seq_len=seq_len)
             print(f'Model {config_name}')
             print(f'Perplexity: {ppl:.4}')
