@@ -8,8 +8,9 @@ from utils import evaluate, get_calibration_loader
 from lm_eval import simple_evaluate
 from lm_eval.models.huggingface import HFLM
 import torch
+import json
 
-task_name = "wikitext"  # hellaswag
+task_name = "mmlu_flan_n_shot_generative_stem"  # hellaswag  #  mmlu_flan_n_shot_generative_stem
 model_id = "meta-llama/Llama-2-7b-hf"
 # config_file = "configs/w8a8_per_tensor_per_token_dynamic.yaml"
 config_file = "float"
@@ -31,6 +32,10 @@ with torch.no_grad():
 
 hf_model = HFLM(model)
 
-results = simple_evaluate(hf_model, tasks=[task_name], batch_size=8)
+results = simple_evaluate(hf_model, tasks=[task_name], batch_size=8, limit=0.1)
 
 pprint(results['results'])
+
+with open('lm-eval_results.json', 'w') as fp:
+    json.dump(results['results'], fp)  # numbers only
+    # json.dump(results, fp)  # deosn't work - not serializable
