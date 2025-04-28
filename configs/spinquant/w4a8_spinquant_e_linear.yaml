@@ -5,7 +5,7 @@ QAT:
       status: On
       bits: 8
       custom_bits: {'lm_head': 16}
-      symmetric: On
+      symmetric: Off
       per_channel: True
       quantization_mode: static
       observer: 'MovingAverage'
@@ -13,7 +13,7 @@ QAT:
       status: Off
       bits: 4
       custom_bits: {'lm_head': 16}
-      symmetric: On
+      symmetric: Off
       per_channel: True
       quant_and_freeze: False
 
@@ -26,6 +26,17 @@ QAT:
             weight_per_channel: True
             offline_quant_weights: True
           act_quantizer:
+            act_dynamic: True
+            observer: MinMax
+
+      - source_module: torch.nn.Linear
+        source_name: "lm_head"
+        destination_module: LinearQuant
+        params:
+          weights_quantizer:
+            weight_bits: 16
+          act_quantizer:
+            act_bits: 16
             act_dynamic: True
             observer: MinMax
 
