@@ -24,8 +24,6 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    if args.load_model_path and args.load_spinquant_path:
-        raise ValueError("Both load_model_path and load_spinquant_path cannot be provided at the same time.")
     print('Initializing tokenizer')
     tokenizer = LlamaTokenizer.from_pretrained(args.model_dir)
     print(f'Loading model: {args.config_file}')

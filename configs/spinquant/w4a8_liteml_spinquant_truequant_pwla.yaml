@@ -1,0 +1,83 @@
+QAT:
+    fully_quantized: False
+    device: 'cuda'
+    data_quantization:
+      status: On
+      bits: 8
+      custom_bits: {}
+      symmetric: On
+      per_channel: True
+      quantization_mode: static
+      observer: 'MovingAverage'
+    weights_quantization:
+      status: On
+      bits: 4
+      custom_bits: {}
+      symmetric: On
+      per_channel: True
+      quant_and_freeze: True
+
+    external_state_dict:
+      /AI_Labs/spinquant_models/liteml_spinquant_gptq_group128_TrueQuantRMSNorm.pth
+
+    custom_quantization:
+      - source_module: torch.nn.Linear
+        source_name: "lm_head"
+        destination_module: LinearQuant
+        params:
+          weights_quantizer:
+            weight_bits: 16
+          act_quantizer:
+            act_bits: 16
+            act_dynamic: True
+            observer: MinMax
+
+      - source_module: torch.nn.Linear
+        destination_module: TrueQuantLinear
+        params:
+          weights_quantizer:
+            group_size: 128
+            weight_obs_method: Preset
+          act_quantizer:
+            group_size: 128
+            act_dynamic: True
+            observer: PWLA
+
+      - source_module: LiteMLMatmul
+        source_name: matmul_qkt
+        destination_module: TrueQuantMatmul
+        params:
+          quantizer_in1: # per token
+            act_symmetric: On
+            dims: !!python/tuple [ 0, -1 ]
+            act_dynamic: True
+            observer: PWLA
+          quantizer_in2: # per tensor
+            act_symmetric: On
+            dims: !!python/tuple [ 0, -1, -2 ]
+            act_dynamic: False
+            observer: MovingAverage
+
+      - source_module: LiteMLMatmul
+        source_name: matmul_pv
+        destination_module: TrueQuantMatmul
+        params:
+          quantizer_in1: # per token
+            act_symmetric: On
+            dims: !!python/tuple [ 0, -1 ]
+            act_dynamic: True
+            observer: PWLA
+          quantizer_in2: # per tensor
+            act_symmetric: On
+            dims: !!python/tuple [ 0, -1, -2 ]
+            act_dynamic: False
+            observer: MovingAverage
+
+      - source_module: torch.nn.SiLU
+        destination_module: PWLA.pwla_float_true_quant.pwla_Silu.PwlaSilU
+
+      - source_module: LlamaRMSNorm
+        destination_module: PWLA.pwla_float_true_quant.pwla_quant_rmsnorm.TrueQuantRMSNorm
+
+      - source_module: torch.nn.Softmax
+        destination_module: PWLA.pwla_float_true_quant.pwla_softmax.PwlaSoftmax
