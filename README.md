@@ -52,3 +52,9 @@ python evaluate_models.py --config_file configs/spinquant/w4a8_liteml_spinquant_
 ```bash
 python evaluate_models.py --config_file configs/spinquant/w4a8_liteml_spinquant_e_external_state_dict.yaml --load_model_path /path/to/liteml_spinquant.pth
 ```
+
+#### Load weights and scale factors from SpinQuant's state dict and perform PTQ with LiteML using "true quant" mode:
+```bash
+python evaluate_models.py --config_file configs/spinquant/w4a8_liteml_spinquant_truequant_pwla.yaml
+```
+
