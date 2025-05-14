@@ -61,3 +61,6 @@ QAT:
 
       - source_module: torch.nn.SiLU
         destination_module: PwlaSilU
+        params:
+          dom_span_min : -4
+          dom_span_max : 3
