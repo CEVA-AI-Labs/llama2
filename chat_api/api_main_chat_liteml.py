@@ -89,6 +89,7 @@ configs_dict = {
         'w8a8_per_tensor_per_token_dynamic': {'config': '../configs/w8a8_per_tensor_per_token_dynamic.yaml'},
         'w8a8_static':  {'config': '../configs/w8a8_static.yaml'},
         'w8a8_npm_v1_3_4': {'config': '../configs/w8a8_npm_v1_3_4.yaml'},
+        'w8a8_npm_v1_3_4_p16_static': {'config': '../configs/v1_3_4/w8a8_npm_v1_3_4_p16_static.yaml'},
         'w4a8_g128': {'config': '../configs/w4a8_liteml_g128.yaml'},
         'w4a8_liteml_spinquant_e': {'config': '../configs/spinquant/w4a8_liteml_spinquant_e.yaml',
                                     'state_dict': "/projects/vbu_projects/users/royj/gitRepos/SpinQuant/saved_models/retrained_liteml_spinquant_gptq_group128_chat.pth"}
