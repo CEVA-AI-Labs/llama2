@@ -1,6 +1,6 @@
 import argparse
 import torch
-from transformers import LlamaTokenizer
+from transformers import LlamaTokenizer, AutoTokenizer
 from ceva_modeling_llama_v4_46 import LlamaForCausalLM, LlamaDecoderLayer
 from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
@@ -25,9 +25,9 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     print('Initializing tokenizer')
-    tokenizer = LlamaTokenizer.from_pretrained(args.model_dir)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_dir)
     print(f'Loading model: {args.config_file}')
-    model = LlamaForCausalLM.from_pretrained(args.model_dir, device_map='auto', torch_dtype=torch.float16)
+    model = LlamaForCausalLM.from_pretrained(args.model_dir, device_map='auto', torch_dtype=torch.float16, attn_implementation='eager')
 
     with torch.no_grad():
         if args.config_file != 'float':
@@ -53,4 +53,4 @@ if __name__ == '__main__':
 
         ppl = evaluate(model, tokenizer, seq_len=args.seq_len)
         print(f'Model {args.config_file}')
-        print(f'Perplexity: {ppl:.4}')
+        print(f'Perplexity: {ppl}')
