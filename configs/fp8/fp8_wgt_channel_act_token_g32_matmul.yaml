@@ -43,13 +43,13 @@ QAT:
         source_name: matmul_qkt
         destination_module: QuantMatmul
         params:
-          quantizer_in1: # per token
+          quantizer_in1: # per token per head
             act_bits: 8
             act_symmetric: On
             dims: [ 0, -1 ]
             act_dynamic: True
             observer: MinMax
-          quantizer_in2: # per tensor
+          quantizer_in2: # per tensor per head
             act_bits: 8
             act_symmetric: On
             dims: [ 0, -1, -2 ]
@@ -60,13 +60,13 @@ QAT:
         source_name: matmul_pv
         destination_module: QuantMatmul
         params:
-          quantizer_in1: # per token
+          quantizer_in1: # per tensor
             act_bits: 16
             act_symmetric: On
-            dims: []
+            dims: [ ]
             act_dynamic: False
             observer: MovingAverage
-          quantizer_in2: # per tensor
+          quantizer_in2: # per tensor per head
             act_bits: 8
             act_symmetric: On
             dims: [ 0, -1, -2 ]

@@ -1,6 +1,6 @@
 import argparse
 import torch
-from transformers import LlamaTokenizer, AutoTokenizer
+from transformers import AutoTokenizer
 from ceva_modeling_llama_v4_46 import LlamaForCausalLM, LlamaDecoderLayer
 from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
 from liteml.ailabs_shared.load_config import load_config
