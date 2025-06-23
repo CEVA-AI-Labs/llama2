@@ -7,54 +7,43 @@ from transformers.models.llama.modeling_llama import LlamaForCausalLM
 import torch.nn as nn
 
 
-def get_calibration_loader(tokenizer: LlamaTokenizer, seq_len: int = 2048) -> list:
+def get_calibration_loader(tokenizer: LlamaTokenizer, seq_len: int = 2048, split_percentage=10) -> list:
     """
     Loads calibration dataset from wikitext that is used to calibrate the quantization parameters during static
     quantization. The data is obtained from wikitext2 dataset.
     Args:
         tokenizer (LlamaTokenizer): A tokenizer suitable for Llama-2 model.
         seq_len (int): Sequence length of each batch in the calibration data.
+        split_percentage (int): Percentage of the dataset to use for calibration, between 0 and 100.
 
     Returns:
         List of tensors of shape (1, seq_len) containing the input tokens.
 
     """
-    cache_calibloader = f'cache/calibrationloader_wikitext2.cache'
-    if os.path.exists(cache_calibloader):
-        calibloader = torch.load(cache_calibloader)
-    else:
-        calib = load_dataset("wikitext", "wikitext-2-raw-v1", split="train[0:10%]")
-        calibloader = tokenizer("\n\n".join(calib["text"]), return_tensors="pt")
-        if not os.path.exists('cache'):
-            os.makedirs('cache')
-        torch.save(calibloader, cache_calibloader)
+    calib = load_dataset("wikitext", "wikitext-2-raw-v1", split=f"train[0:{split_percentage}%]")
+    calibloader = tokenizer("\n\n".join(calib["text"]), return_tensors="pt")
+
     encodings = calibloader.input_ids
     nsamples = encodings.numel() // seq_len
     batch = [encodings[:, (i * seq_len): ((i + 1) * seq_len)] for i in range(nsamples)]
     return batch
 
 
-def evaluate(model: LlamaForCausalLM, tokenizer: LlamaTokenizer, seq_len=2048) -> torch.Tensor:
+def evaluate(model: LlamaForCausalLM, tokenizer: LlamaTokenizer, seq_len=2048, split_percentage=100) -> torch.Tensor:
     """
     Evaluate model perplexity on wikitext-2 test dataset.
     Args:
         model: Llama model. Can be wrapped with LiteML RetrainerModel.
         tokenizer (LlamaTokenizer): A tokenizer suitable for Llama-2 model.
         seq_len (int): Sequence length of each batch in the evaluation data.
+        split_percentage (int): Percentage of the dataset to use for evaluation, between 0 and 100.
 
     Returns:
         Perplexity of the model on wikitext-2 test dataset.
 
     """
-    cache_testloader = f'cache/testloader_wikitext2.cache'
-    if os.path.exists(cache_testloader):
-        testloader = torch.load(cache_testloader)
-    else:
-        test = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
-        testloader = tokenizer("\n\n".join(test["text"]), return_tensors="pt")
-        if not os.path.exists('cache'):
-            os.makedirs('cache')
-        torch.save(testloader, cache_testloader)
+    test = load_dataset("wikitext", "wikitext-2-raw-v1", split=f"test[0:{split_percentage}%]")
+    testloader = tokenizer("\n\n".join(test["text"]), return_tensors="pt")
 
     encodings = testloader.input_ids
     nsamples = encodings.numel() // seq_len
