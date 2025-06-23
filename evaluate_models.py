@@ -27,7 +27,7 @@ if __name__ == '__main__':
     print('Initializing tokenizer')
     tokenizer = LlamaTokenizer.from_pretrained(args.model_dir)
     print(f'Loading model: {args.config_file}')
-    model = LlamaForCausalLM.from_pretrained(args.model_dir, device_map='auto', torch_dtype=torch.float16)
+    model = LlamaForCausalLM.from_pretrained(args.model_dir, device_map='auto', torch_dtype=torch.float16, attn_implementation='eager')
 
     with torch.no_grad():
         if args.config_file != 'float':
