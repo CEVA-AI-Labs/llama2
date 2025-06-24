@@ -10,7 +10,7 @@ QAT:
       quantization_mode: static
       observer: 'MovingAverage'
     weights_quantization:
-      status: Off
+      status: On
       bits: 4
       custom_bits: {'lm_head': 16}
       symmetric: Off

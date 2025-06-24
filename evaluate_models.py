@@ -26,7 +26,7 @@ def load_spinquant_weights(model, spinquant_model_path):
 
    # Add quantized weights, scales and maxq to linear layers as buffers
     # 'model.layers.0.self_attn.q_proj.module.int_weight'
-    expr = re.compile(r"(?P<idx>\d+)\.(?P<layer>(\bself_attn\b)|(\bmlp\b))\.(?P<lin>\w+_proj)\.module\.(?P<buff>(\bint_weight\b)|(\bmaxq\b)|(\bscale\b))")
+    expr = re.compile(r"(?P<idx>\d+)\.(?P<layer>(\bself_attn\b)|(\bmlp\b))\.(?P<lin>\w+_proj)\.module\.(?P<buff>(\bint_weight\b)|(\bmaxq\b)|(\bscale\b)|(\bzero\b))")
     for key in spinquant_state_dict:
         mm = expr.search(key)
         if mm is None: continue
@@ -37,6 +37,7 @@ def load_spinquant_weights(model, spinquant_model_path):
         lin = layer.__getattr__(mm.group("lin"))
         lin.register_buffer(mm.group("buff"), spinquant_state_dict[key])
         print(f"Assigning model.layers.{mm.group('idx')}.{mm.group('layer')}.{mm.group('lin')}.{mm.group('buff')}")
+    pass
 ''' 
 def load_spinquant_weights(model, spinquant_model_path):
     """
@@ -62,22 +63,39 @@ if __name__ == '__main__':
         # 'configs/w8a8_static.yaml',  # the static configuration
         # 'configs/w8a8_npm_v1_3_4.yaml',  # The mixed dynamic and static configuration
         #'configs/spinquant/w4a8_spinquant_e.yaml',
-        'configs/spinquant/w4a8_spinquant_e_softmax.yaml',
+        #'configs/spinquant/w4a8_spinquant_e_softmax.yaml',
         #'configs/spinquant/w4a8_spinquant_e_matmul.yaml',
         #'configs/spinquant/w4a8_spinquant_e_Silu.yaml',
         #'configs/spinquant/w4a8_spinquant_e_rmsnorm.yaml',
-        #'configs/spinquant/w4a8_spinquant_e_linear.yaml',
+        'configs/spinquant/w4a8_spinquant_e_linear.yaml',
         #'configs/spinquant/w4a8_spinquant_e_all.yaml',
 
     ]
 
     #spinquant_path = "/projects/systems/systems/Ranam/SpinQuant/saved_models/spinquant_gptq_group128.pth"
-    spinquant_path = "spinquant_gptq_group128.pth"
+    #spinquant_path = "spinquant_gptq_group128.pth"
     #spinquant_path = "spinquant_gptq_spda.pth"
-    #spinquant_path = "/home/ranam/Documents/LiteML/Llama2/spinquant_gptq_spda.pth"
-    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_wrtn_group3.pth"
-    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group3.pth"
-    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group4.pth"
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group4.pth"    #-1
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group5.pth"   #32
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group7.pth"   #128
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group6.pth"   #512
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group_g128.pth"  #128
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group_g32.pth"  #128
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group_a128w128.pth"  #128_128
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group_a32w32.pth"  #128_128
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group_a64w64.pth"  #128_128
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_w8b_w-1_a-1_hist.pth"  #128_128 roy
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_group_a128w32.pth"  #128_128
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_asym_kv_a-1_w-1.pth"  #4096_4096   ####### i was here
+    spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/final/spinquant_rtn_asym_a-1_w-1.pth"  #4096_4096
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/final/spinquant_rtn_sym_a-1_w-1.pth"  #4096_4096   ####### i was here
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_sym_a-1_w-1_gpu6.pth"  #4096_4096
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_asym_kv_a-1_w-1_zero.pth"  #4096_4096
+    #spinquant_path = "/projects/systems/Ranam/spinQuant/saved_models/spinquant_gptq_asym_kvaw_a-1_w-1.pth"  #4096_4096
+    #spinquant_path = "/projects/systems/accuracy/spinquant/SpinQuant/saved_models/spinquant_wg128_ag-1.pth"
+    #spinquant_path = "/projects/vbu_projects/users/royj/spinquant_models/spinquant_w128_a128.pth"
+
+
 
 
     ppl_list = []
@@ -104,6 +122,7 @@ if __name__ == '__main__':
                     ] = calib_loader
                     conf["QAT"]["data_quantization"][
                         "calibration_loader_key"
+
                     ] = lambda model, x: model(x.cuda())
                 model = RetrainerModel(model, config=RetrainerConfig(conf))
 
