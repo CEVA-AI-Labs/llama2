@@ -316,6 +316,8 @@ class LlamaAttention(nn.Module):
         self.rotary_add_q = LiteMLAdd()
         self.rotary_add_k = LiteMLAdd()
         self.add_mask = LiteMLAdd()
+        self.softmax = nn.Softmax(dim=-1)
+
 
         # TODO (joao): remove in v4.46 (RoPE is computed in the model, not in the decoder layers)
         self.rotary_emb = LlamaRotaryEmbedding(config=self.config)
@@ -394,11 +396,22 @@ class LlamaAttention(nn.Module):
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             # attn_weights = attn_weights + causal_mask
-            attn_weights = self.add_mask(attn_weights, causal_mask)
+            #attn_weights = self.add_mask(attn_weights, causal_mask)
+            torch.where(
+                causal_mask > torch.finfo(torch.float16).min,
+                attn_weights,
+                torch.tensor(
+                    torch.finfo(torch.float16).min,
+                    dtype=torch.float16,
+                    device=attn_weights.device,
+                ),
+                out=attn_weights,
+            )
 
 
         # upcast attention to fp32
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        #attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
+        attn_weights = self.softmax(attn_weights).to(query_states.dtype)
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
         # attn_output = torch.matmul(attn_weights, value_states)
         attn_output = self.matmul_pv(attn_weights, value_states) # in1 per-tensor, in2 per-token

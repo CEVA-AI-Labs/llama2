@@ -1,0 +1,42 @@
+QAT:
+    fully_quantized: False
+    device: 'cuda'
+    data_quantization:
+      status: On
+      bits: 8
+      custom_bits: {}
+      symmetric: On
+      per_channel: True
+      quantization_mode: dynamic
+      observer: 'MinMax'
+    weights_quantization:
+      status: On
+      bits: 8
+      custom_bits: {}
+      symmetric: On
+      per_channel: True
+      quant_and_freeze: True
+
+    custom_quantization:
+      - source_module: torch.nn.Linear
+        source_name: "lm_head"
+        destination_module: LinearQuant
+        params:
+          weights_quantizer:
+            weight_bits: 16
+          act_quantizer:
+            act_bits: 16
+
+      - source_module: torch.nn.Linear
+        destination_module: TrueQuantLinear
+        params:
+          weights_quantizer:
+            weight_obs_method: MinMax
+            weight_bits: fp8_e4m3fn_npm # qint8 #qfloat8
+          act_quantizer:
+            act_bits: fp8_e4m3fn_npm # qint8 #qfloat8
+            observer: PWLA
+
+
+
+
